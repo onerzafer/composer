@@ -112,13 +112,13 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 ### Implementation: MCP server
 
-- [ ] T045 [US1] MCP stdio server entry using `@modelcontextprotocol/sdk` (research R5) in `/packages/mcp/src/server.ts`
-- [ ] T046 [P] [US1] MCP tool registration: `composer.discover` in `/packages/mcp/src/tools/discover.ts` (per `contracts/mcp-tools.md`)
-- [ ] T047 [P] [US1] MCP tool registration: `composer.scaffold` in `/packages/mcp/src/tools/scaffold.ts`
-- [ ] T048 [P] [US1] MCP tool registration: `composer.validate` in `/packages/mcp/src/tools/validate.ts`
-- [ ] T049 [P] [US1] MCP tool registration: `composer.compose` in `/packages/mcp/src/tools/compose.ts`
-- [ ] T050 [US1] MCP tool descriptions (per `contracts/mcp-tools.md` final section) wired into each tool's `inputSchema.description` so the agent sees them in `tools/list`
-- [ ] T051 [US1] `@composer/mcp` bin entrypoint + `package.json` bin field so `npx @composer/mcp` works
+- [X] T045 [US1] MCP stdio server entry using `@modelcontextprotocol/sdk` (research R5) in `/packages/mcp/src/server.ts`
+- [X] T046 [P] [US1] MCP tool registration: `composer.discover` in `/packages/mcp/src/tools/discover.ts` (per `contracts/mcp-tools.md`)
+- [X] T047 [P] [US1] MCP tool registration: `composer.scaffold` in `/packages/mcp/src/tools/scaffold.ts`
+- [X] T048 [P] [US1] MCP tool registration: `composer.validate` in `/packages/mcp/src/tools/validate.ts`
+- [X] T049 [P] [US1] MCP tool registration: `composer.compose` in `/packages/mcp/src/tools/compose.ts`
+- [X] T050 [US1] MCP tool descriptions (per `contracts/mcp-tools.md` final section) wired into each tool's `inputSchema.description` so the agent sees them in `tools/list`
+- [X] T051 [US1] `@composer/mcp` bin entrypoint + `package.json` bin field so `npx @composer/mcp` works
 
 ### Implementation: reference adapter `@composer/adapter-next`
 
