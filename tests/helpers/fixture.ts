@@ -3,9 +3,21 @@
 // The full reference fixture lives in T065 (tests/fixtures/next-project/);
 // these helpers are for unit/integration tests that need a one-off project.
 
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
+
+// Resolve the composer monorepo root: tests/helpers/fixture.ts → tests/helpers → tests → ROOT
+const COMPOSER_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+const TESTS_NODE_MODULES = join(COMPOSER_ROOT, "tests", "node_modules");
 
 export interface Fixture {
   projectRoot: string;
@@ -34,6 +46,27 @@ export function makeFixture(options: FixtureOptions = {}): Fixture {
     JSON.stringify(composerJson, null, 2),
     "utf8",
   );
+
+  // Fixture projects need `"type": "module"` so tsx transpiles workspace
+  // TS files (catalog/index.ts, output.map.ts) as ESM rather than CJS.
+  // Without this, dynamically-loaded TS modules emit `__filename` references
+  // that fail in the ESM-mode test runner.
+  writeFileSync(
+    join(projectRoot, "package.json"),
+    JSON.stringify({ name: "composer-fixture", version: "0.0.0", private: true, type: "module" }, null, 2),
+    "utf8",
+  );
+
+  // Symlink the tests workspace's node_modules so the fixture's catalog can
+  // resolve `zod` etc. Pnpm uses content-addressing in the root node_modules,
+  // so we point at tests/node_modules where zod is a direct dep.
+  if (existsSync(TESTS_NODE_MODULES)) {
+    try {
+      symlinkSync(TESTS_NODE_MODULES, join(projectRoot, "node_modules"), "dir");
+    } catch {
+      /* best-effort; surface failures via test errors */
+    }
+  }
 
   mkdirSync(join(workspaceRoot, "catalog"), { recursive: true });
   mkdirSync(join(workspaceRoot, "templates"), { recursive: true });

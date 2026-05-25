@@ -101,7 +101,7 @@ describe("MCP composer.compose — atomic write (FR-003)", () => {
       title: "Hello",
     });
 
-    const lockPath = join(fixture.projectRoot, ".composer", "cache", "compose.lock");
+    const lockPath = join(fixture.workspaceRoot, ".composer", "cache", "compose.lock");
     expect(existsSync(lockPath)).toBe(false);
   });
 
@@ -112,7 +112,9 @@ describe("MCP composer.compose — atomic write (FR-003)", () => {
     if (!compose) throw new Error("compose() pending T043");
 
     // Simulate a held lock by writing one referencing the current PID.
-    const lockDir = join(fixture.projectRoot, ".composer", "cache");
+    // Lock lives inside the workspace folder (`<workspace>/.composer/cache/`),
+    // not the project root (per FR-CONC-001 + data-model §11).
+    const lockDir = join(fixture.workspaceRoot, ".composer", "cache");
     const lockPath = join(lockDir, "compose.lock");
     const { mkdirSync } = await import("node:fs");
     mkdirSync(lockDir, { recursive: true });

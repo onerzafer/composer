@@ -12,6 +12,7 @@
     "@composer/adapter-kit": "workspace:*",
     "@composer/core": "workspace:*",
     "@composer/mcp": "workspace:*",
-    "@composer/typescript": "workspace:*"
+    "@composer/typescript": "workspace:*",
+    "zod": "^3.23.0"
   }
 }

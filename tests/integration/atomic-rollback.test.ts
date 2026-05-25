@@ -82,12 +82,18 @@ describe("Atomic rollback — compose is all-or-nothing", () => {
   });
 });
 
-/** Snapshot the project's file tree (paths only, sorted) for byte-identical comparisons. */
+/**
+ * Snapshot the project's file tree (paths only, sorted) for byte-identical comparisons.
+ * Excludes `.composer/` — that's the engine's internal cache + observability dir
+ * (FR-OBS-001 mandates a log on every invocation, including failures), not
+ * workspace state. SC-007 is about workspace + outputs, not logs/cache.
+ */
 function snapshotTree(root: string): string[] {
   const out: string[] = [];
   function walk(dir: string): void {
     if (!existsSync(dir)) return;
     for (const entry of readdirSync(dir)) {
+      if (entry === ".composer") continue;
       const abs = join(dir, entry);
       const s = statSync(abs);
       if (s.isDirectory()) walk(abs);

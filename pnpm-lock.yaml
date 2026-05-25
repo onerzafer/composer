@@ -68,9 +68,15 @@ importers:
       handlebars:
         specifier: ^4.7.8
         version: 4.7.9
+      tsx:
+        specifier: ^4.19.0
+        version: 4.22.3
       zod:
         specifier: ^3.23.0
         version: 3.25.76
+      zod-to-json-schema:
+        specifier: ^3.23.0
+        version: 3.25.2(zod@3.25.76)
 
   packages/mcp:
     dependencies:
@@ -109,6 +115,9 @@ importers:
       '@composer/typescript':
         specifier: workspace:*
         version: link:../packages/typescript
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
 
 packages:
 

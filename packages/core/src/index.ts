@@ -1,9 +1,8 @@
 // @composer/core — engine library
 //
-// Public API surface assembled from Foundational (Phase 2) modules.
-// Pipeline + agent endpoints land in Phase 3 (US1).
+// v0.1 public API. Phase 2 (Foundational) + Phase 3 (US1 endpoints + pipeline).
 
-export const ENGINE_VERSION = "0.1.0-alpha.0";
+export { ENGINE_VERSION } from "./version.js";
 
 // Workspace
 export {
@@ -51,6 +50,7 @@ export {
   assertPrepSourceSafe,
   type SandboxContext,
 } from "./render/sandbox.js";
+export { buildBanner, buildBlockComment, type BlockMarker } from "./render/banner.js";
 
 // Source map
 export {
@@ -66,3 +66,63 @@ export {
   type FileEntry,
   type SpecEntry,
 } from "./sourcemap/persist.js";
+
+// Pipeline (low-level)
+export {
+  orchestrateCompose,
+  LockHeldExposedError,
+  type ComposeOptions,
+  type ComposeResult,
+} from "./pipeline/orchestrator.js";
+export {
+  structuralValidate,
+  StructuralValidationError,
+  type StructuralResult,
+  type StructuralIssue,
+} from "./pipeline/phases/structural.js";
+export {
+  semanticValidate,
+  SemanticValidationError,
+  type SemanticIssue,
+} from "./pipeline/phases/semantic.js";
+export {
+  runAudit,
+  AuditFailedError,
+  type AuditWorkspaceState,
+} from "./pipeline/phases/audit.js";
+export {
+  renderSpec,
+  RenderFailedError,
+  type RenderInput,
+  type RenderedFile,
+} from "./pipeline/phases/render.js";
+export {
+  driftCheck,
+  DriftDetectedError,
+  type DriftIssue,
+  type DriftCheckInput,
+} from "./pipeline/phases/drift.js";
+export {
+  commit,
+  type CommitInput,
+  type CommitResult,
+  type CommittedFile,
+} from "./pipeline/phases/commit.js";
+
+// Agent API (high-level)
+export { discover, type DiscoverResult, type DiscoverPrimitive, type DiscoverSpec } from "./api/discover.js";
+export {
+  scaffold,
+  type ScaffoldInput,
+  type ScaffoldResult,
+  type ScaffoldPrimitiveResult,
+  type ScaffoldSpecResult,
+} from "./api/scaffold.js";
+export {
+  validate,
+  type ValidateResult,
+  type ValidateError,
+  type ValidateWarning,
+  type ValidateWouldWrite,
+} from "./api/validate.js";
+export { compose } from "./api/compose.js";

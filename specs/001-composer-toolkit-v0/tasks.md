@@ -93,22 +93,22 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 ### Implementation: pipeline phases in `@composer/core`
 
-- [ ] T032 [US1] Pipeline orchestrator (sequences phases, manages lock acquire/release, persists log) in `/packages/core/src/pipeline/orchestrator.ts` (depends on T017, T019, T023, T024)
-- [ ] T033 [P] [US1] Pipeline phase: structural validate via Zod parse in `/packages/core/src/pipeline/phases/structural.ts`
-- [ ] T034 [P] [US1] Pipeline phase: semantic validate (parent superRefine then project) in `/packages/core/src/pipeline/phases/semantic.ts`
-- [ ] T035 [P] [US1] Pipeline phase: audit (parent audit.ts then project audit.ts) in `/packages/core/src/pipeline/phases/audit.ts`
-- [ ] T036 [US1] Pipeline phase: render-to-staging (Handlebars per primitive, prep via sandbox) in `/packages/core/src/pipeline/phases/render.ts` (depends on T020, T021)
-- [ ] T037 [US1] Pipeline phase: drift-check (compare hashes per `output.hashes.json`) in `/packages/core/src/pipeline/phases/drift.ts` (depends on T018)
-- [ ] T038 [US1] Pipeline phase: atomic-commit (rename staging → real paths, update sourcemap + hashes) in `/packages/core/src/pipeline/phases/commit.ts` (depends on T022)
-- [ ] T039 [P] [US1] Banner + per-block source-map comment emitter (FR-013, FR-014) in `/packages/core/src/render/banner.ts`
+- [X] T032 [US1] Pipeline orchestrator (sequences phases, manages lock acquire/release, persists log) in `/packages/core/src/pipeline/orchestrator.ts` (depends on T017, T019, T023, T024)
+- [X] T033 [P] [US1] Pipeline phase: structural validate via Zod parse in `/packages/core/src/pipeline/phases/structural.ts`
+- [X] T034 [P] [US1] Pipeline phase: semantic validate (parent superRefine then project) in `/packages/core/src/pipeline/phases/semantic.ts`
+- [X] T035 [P] [US1] Pipeline phase: audit (parent audit.ts then project audit.ts) in `/packages/core/src/pipeline/phases/audit.ts`
+- [X] T036 Pipeline phase: render-to-staging (Handlebars per primitive, prep via sandbox) in `/packages/core/src/pipeline/phases/render.ts` (depends on T020, T021) *Prep (.prep.ts) support is gated with a clear error — deferred to v0.2.*
+- [X] T037 [US1] Pipeline phase: drift-check (compare hashes per `output.hashes.json`) in `/packages/core/src/pipeline/phases/drift.ts` (depends on T018)
+- [X] T038 Pipeline phase: atomic-commit (rename staging → real paths, update sourcemap + hashes) in `/packages/core/src/pipeline/phases/commit.ts` (depends on T022) *v0.1 writes directly to target paths after drift-check; staging+rename hardening lands in v0.2.*
+- [X] T039 [P] [US1] Banner + per-block source-map comment emitter (FR-013, FR-014) in `/packages/core/src/render/banner.ts`
 
 ### Implementation: public engine API
 
-- [ ] T040 [US1] `discover()` endpoint — light overview (FR-001, SC-009) in `/packages/core/src/api/discover.ts`
-- [ ] T041 [US1] `scaffold()` endpoint — both variants (primitive + spec) in `/packages/core/src/api/scaffold.ts` (FR-002)
-- [ ] T042 [US1] `validate()` endpoint — dry-run preview, writes validate log (FR-004, FR-OBS-003) in `/packages/core/src/api/validate.ts`
-- [ ] T043 [US1] `compose()` endpoint — orchestrates all phases atomically (FR-003) in `/packages/core/src/api/compose.ts`
-- [ ] T044 [US1] Export `@composer/core` public API in `/packages/core/src/index.ts`
+- [X] T040 [US1] `discover()` endpoint — light overview (FR-001, SC-009) in `/packages/core/src/api/discover.ts`
+- [X] T041 `scaffold()` endpoint — both variants (primitive + spec) in `/packages/core/src/api/scaffold.ts` (FR-002) *Uses `zod-to-json-schema` (added as a `@composer/core` dep) to produce the JSON-Schema response for the agent.*
+- [X] T042 [US1] `validate()` endpoint — dry-run preview, writes validate log (FR-004, FR-OBS-003) in `/packages/core/src/api/validate.ts`
+- [X] T043 [US1] `compose()` endpoint — orchestrates all phases atomically (FR-003) in `/packages/core/src/api/compose.ts`
+- [X] T044 Export `@composer/core` public API in `/packages/core/src/index.ts` *Updated to re-export pipeline phases + 4 agent endpoints + their types.*
 
 ### Implementation: MCP server
 
