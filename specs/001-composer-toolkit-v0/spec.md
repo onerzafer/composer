@@ -14,6 +14,16 @@
 
 ---
 
+## Clarifications
+
+### Session 2026-05-25
+
+- Q: How should Composer capture compose-time diagnostics and where? → A: Structured JSON only — one file per compose invocation at `.composer/logs/<timestamp>-<spec_id>.json`; stderr emits only a success/failure summary line.
+- Q: What is the trust model for adapters loaded via `extends:` (their `rules/`, `audit.ts`, `bootstrap.ts`, `*.prep.ts` execute on the developer's machine and inside compose)? → A: Ordinary npm dependencies — no additional verification, no allowlist, no signing. Trust is delegated to the project's existing npm supply-chain controls. Risk documented for adopters; signing/allowlist deferred to v1+.
+- Q: How is concurrent `compose` execution prevented (e.g., MCP-attached agent and CLI human running compose simultaneously)? → A: Whole-workspace lockfile at `.composer/cache/compose.lock` (PID + ISO timestamp). Stale-PID detection reclaims abandoned locks. One compose at a time per workspace. Per-spec parallelism deferred to v1.
+
+---
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — Agent composes a feature against a Composer-instrumented project (Priority: P1)
@@ -110,7 +120,7 @@ A developer sees a runtime error in `src/app/pricing/page.tsx` at line 42. They 
 
 ### Edge Cases
 
-- **Concurrent compose calls** for the same `spec_id`: must be serialized at the engine level. Behavior: second call waits or errors with a clear "compose already in progress" message; no interleaved writes are permitted.
+- **Concurrent compose calls** (any spec_id, any surface — MCP or CLI): serialized via a whole-workspace lockfile at `.composer/cache/compose.lock` containing PID + ISO timestamp. Second caller aborts immediately with `compose in progress (pid X, started Y)`. If the recorded PID is no longer alive, the lock is treated as stale and reclaimed. Released on normal completion or any error path. No queuing — second callers must retry. Per-spec parallelism is out of scope for v0.1.
 - **Compose where staging-dir write succeeds but atomic-rename fails** (e.g., target file locked by another process): staging dir is discarded, original outputs untouched, error reports the OS-level cause.
 - **Parent adapter unreachable from npm** during `compose` (offline, registry down): error includes the version pin from `composer.json` and instructions to use the cached copy under `.composer/cache/parent/`. If no cache, abort with a clear message.
 - **Extends chain forms a cycle** (`A extends B extends A`): detection mandatory; abort init/compose with the chain printed.
@@ -183,6 +193,25 @@ A developer sees a runtime error in `src/app/pricing/page.tsx` at line 42. They 
 #### Engine ignoring
 
 - **FR-023**: System MUST treat `design/catalog/ingested/` as engine-ignored. Files there are not loaded into the catalog, do not affect discover output, and do not participate in compose. Reserved for future brownfield ingestion.
+
+#### Concurrency
+
+- **FR-CONC-001**: System MUST acquire a whole-workspace lock at `.composer/cache/compose.lock` (containing the current PID + ISO 8601 start timestamp) at the beginning of every `compose` invocation and release it on completion or any error path.
+- **FR-CONC-002**: If `compose.lock` already exists AND the recorded PID is currently alive, system MUST abort immediately with the lock-holder's PID and start time. No queuing, no waiting.
+- **FR-CONC-003**: If `compose.lock` exists AND the recorded PID is no longer alive (stale lock), system MUST reclaim the lock and proceed.
+- **FR-CONC-004**: `validate` (preview) MUST NOT acquire the compose lock. Validate is read-only and may run concurrently with compose.
+
+#### Security & trust
+
+- **FR-SEC-001**: System MUST load adapter code (rules, audit, bootstrap, prep) via standard Node module resolution from `node_modules/`. No additional verification (signing, hashing, allowlist) is performed in v0.1.
+- **FR-SEC-002**: System MUST continue to sandbox template `*.prep.ts` execution per FR-011 / FR-017 regardless of whether the prep comes from the project workspace or the parent adapter. (The prep sandbox is the security boundary; adapter trust is not.)
+- **FR-SEC-003**: Documentation for `composer init --extends <pkg>` MUST warn that adopting an adapter executes code from that package on the user's machine — same trust posture as any other npm dependency.
+
+#### Observability
+
+- **FR-OBS-001**: System MUST write one structured JSON log per `compose` invocation at `.composer/logs/<timestamp>-<spec_id>.json`. Log includes: invocation metadata (timestamp, spec_id, engine version, adapter version), each pipeline step with phase + duration + outcome, all validation errors, all files written/skipped/aborted, drift-check results, and final status.
+- **FR-OBS-002**: System MUST emit ONLY a one-line success-or-failure summary to stderr on compose completion. Verbose human-readable streaming is out of scope for v0.1.
+- **FR-OBS-003**: System MUST also write a structured log per `validate` invocation (dry-run preview) under the same `.composer/logs/` directory with naming `<timestamp>-<spec_id>-validate.json`.
 
 #### Multi-agent attach
 
