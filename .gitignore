@@ -14,6 +14,15 @@ dist/
 build/
 *.tsbuildinfo
 
+# adapter-next builds in-place (rootDir=. outDir=.) so build artifacts
+# live next to source; gitignore them but keep them in npm publish via
+# the package's `files` field in package.json.
+packages/adapter-next/**/*.js
+packages/adapter-next/**/*.js.map
+packages/adapter-next/**/*.d.ts
+packages/adapter-next/**/*.d.ts.map
+# But keep config-style JS exports if any (e.g., eslint config) — none in v0.1.
+
 # Env
 .env
 .env.local

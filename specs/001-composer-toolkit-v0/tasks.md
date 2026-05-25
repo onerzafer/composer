@@ -135,14 +135,14 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 ### Implementation: Claude Code skill pack `@composer/skill-claude`
 
-- [ ] T062 [US1] Skill prose `SKILL.md` (workflow: always discover first, never write source directly, route through compose) in `/packages/skill-claude/SKILL.md`
-- [ ] T063 [P] [US1] Skill MCP config `mcp.json` pointing to `@composer/mcp` in `/packages/skill-claude/mcp.json`
-- [ ] T064 [P] [US1] Skill prompts (`attached.md`, `compose-feature.md`, `debugging.md`) in `/packages/skill-claude/prompts/`
+- [X] T062 [US1] Skill prose `SKILL.md` (workflow: always discover first, never write source directly, route through compose) in `/packages/skill-claude/SKILL.md`
+- [X] T063 [P] [US1] Skill MCP config `mcp.json` pointing to `@composer/mcp` in `/packages/skill-claude/mcp.json`
+- [X] T064 [P] [US1] Skill prompts (`attached.md`, `compose-feature.md`, `debugging.md`) in `/packages/skill-claude/prompts/`
 
 ### End-to-end validation for User Story 1
 
-- [ ] T065 [US1] Fixture Next.js project at `/tests/fixtures/next-project/` — minimal Next.js App Router app with `composer.json: { extends: @composer/adapter-next@1 }`
-- [ ] T066 [US1] E2E agent loop test (US1 Acceptances #1–#5; SC-001) — drives the mock-agent through discover → scaffold → compose against the fixture — in `/tests/e2e/agent-loop.test.ts`
+- [X] T065 [US1] Fixture Next.js project at `/tests/fixtures/next-project/` — minimal Next.js App Router app with `composer.json: { extends: @composer/adapter-next@1 }`
+- [X] T066 [US1] E2E agent loop test (US1 Acceptances #1–#5; SC-001) — drives the mock-agent through discover → scaffold → compose against the fixture — in `/tests/e2e/agent-loop.test.ts`
 
 **Checkpoint**: User Story 1 fully functional. An agent attached via MCP can compose features in a fixture Next.js project. **MVP boundary reached if shipping just US1.**
 

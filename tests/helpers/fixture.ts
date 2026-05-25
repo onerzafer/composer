@@ -4,6 +4,7 @@
 // these helpers are for unit/integration tests that need a one-off project.
 
 import {
+  cpSync,
   existsSync,
   mkdtempSync,
   mkdirSync,
@@ -18,6 +19,7 @@ import { fileURLToPath } from "node:url";
 // Resolve the composer monorepo root: tests/helpers/fixture.ts → tests/helpers → tests → ROOT
 const COMPOSER_ROOT = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const TESTS_NODE_MODULES = join(COMPOSER_ROOT, "tests", "node_modules");
+const ADAPTER_NEXT_DIR = join(COMPOSER_ROOT, "packages", "adapter-next");
 
 export interface Fixture {
   projectRoot: string;
@@ -117,3 +119,30 @@ export const STUB_OUTPUT_MAP = `export default {
   },
 };
 `;
+
+/**
+ * T065 — Next.js fixture project.
+ *
+ * Creates a Composer-instrumented Next.js project in a tempdir by copying
+ * `@composer/adapter-next`'s catalog + templates + output.map into the
+ * fixture's workspace. The fixture is throw-away per test.
+ *
+ * Why programmatic instead of a checked-in fixture: avoids duplicating the
+ * adapter content across the repo. CI exercises adapter-next via this helper
+ * so any adapter change is automatically reflected in E2E tests.
+ */
+export function makeNextProjectFixture(options: FixtureOptions = {}): Fixture {
+  const fixture = makeFixture(options);
+
+  // Copy adapter-next's content into the workspace as if `composer init
+  // --extends @composer/adapter-next` had populated it.
+  cpSync(join(ADAPTER_NEXT_DIR, "catalog"), join(fixture.workspaceRoot, "catalog"), {
+    recursive: true,
+  });
+  cpSync(join(ADAPTER_NEXT_DIR, "templates"), join(fixture.workspaceRoot, "templates"), {
+    recursive: true,
+  });
+  cpSync(join(ADAPTER_NEXT_DIR, "output.map.ts"), join(fixture.workspaceRoot, "output.map.ts"));
+
+  return fixture;
+}

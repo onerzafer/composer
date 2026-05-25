@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "composer": {
+      "command": "npx",
+      "args": ["-y", "@composer/mcp"]
+    }
+  }
+}
