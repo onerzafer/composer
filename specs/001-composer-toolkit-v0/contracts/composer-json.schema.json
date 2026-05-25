@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://composer.dev/schemas/composer-json/v1.json",
+  "title": "Composer Project Configuration",
+  "description": "The composer.json file at the root of a Composer-instrumented project. Declares workspace location, catalog-authoring engine, and optional parent adapter for inheritance.",
+  "type": "object",
+  "required": ["workspace", "engine"],
+  "additionalProperties": false,
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Path to the workspace folder relative to composer.json. The workspace contains catalog/, templates/, specs/, output.map.ts, and the engine cache.",
+      "pattern": "^\\./[^/].*$|^[^/].*$",
+      "examples": ["./design", "./.composer-workspace", "design"]
+    },
+    "engine": {
+      "type": "string",
+      "description": "Pinned catalog-authoring engine package and semver-major. v0.1 supports only @composer/typescript@1.",
+      "pattern": "^@composer/typescript@[0-9]+$",
+      "examples": ["@composer/typescript@1"]
+    },
+    "extends": {
+      "type": ["string", "null"],
+      "description": "Optional parent adapter package and semver-major. When set, the parent's content is loaded first and the workspace content layers on top per documented resolution rules. When omitted, the workspace is fully self-contained.",
+      "pattern": "^(@[a-z0-9][a-z0-9-]*/)?[a-z0-9][a-z0-9-]*@[0-9]+$",
+      "examples": ["@composer/adapter-next@1", "@acme/composer-adapter-rails@2"]
+    },
+    "$schema": {
+      "type": "string",
+      "description": "Optional reference to this JSON Schema for editor support.",
+      "format": "uri"
+    }
+  }
+}
