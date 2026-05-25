@@ -95,9 +95,11 @@ async function renderNode(
 
 function resolveOutputs(map: OutputMap, primitive: string, node: unknown): OutputPath[] {
   const resolver = map.byPrimitive[primitive];
-  if (!resolver) {
-    throw new RenderFailedError(`No output mapping for primitive "${primitive}"`);
-  }
+  // A primitive without an output mapping is an *embedded* primitive — its
+  // parent's template is responsible for rendering it inline. Return [] so
+  // the engine skips file emission for this node and lets recursion proceed
+  // (children may have their own mappings).
+  if (!resolver) return [];
   return resolver(node as Record<string, unknown>);
 }
 

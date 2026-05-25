@@ -1,0 +1,62 @@
+{{!-- adapter-next Page template — emits src/app/<slug>/page.tsx --}}
+{{!-- from: {{spec_path}} primitive=Page slug={{slug}} --}}
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: {{{json title}}} };
+
+export default function {{kebab slug}}Page() {
+  return (
+    <main className="container mx-auto px-4 py-12">
+{{#each tree}}
+{{#if (eq primitive "Hero")}}
+      {/* Hero · id={{id}} · variant={{variant}} */}
+      <section className="hero hero--{{variant}} text-center py-16">
+        <h1 className="text-4xl font-bold">{{title}}</h1>
+{{#if subtitle}}
+        <p className="text-lg text-gray-600 mt-4">{{subtitle}}</p>
+{{/if}}
+{{#if cta}}
+        <a
+          href={{{json cta.href}}}
+          className={`mt-8 inline-block px-6 py-3 rounded ${"{{cta.variant}}" === "secondary" ? "bg-gray-200" : "bg-blue-600 text-white"}`}
+        >
+          {{cta.label}}
+        </a>
+{{/if}}
+      </section>
+{{/if}}
+{{#if (eq primitive "Section")}}
+      {/* Section · id={{id}} */}
+      <section className="py-12">
+{{#if title}}
+        <h2 className="text-2xl font-semibold mb-6">{{title}}</h2>
+{{/if}}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+{{#each cards}}
+          {/* Card · id={{id}} */}
+          <article className="rounded border p-6">
+{{#if icon}}
+            <div className="text-2xl mb-2" aria-hidden="true">{{icon}}</div>
+{{/if}}
+            <h3 className="font-semibold">{{title}}</h3>
+            <p className="text-gray-600 mt-2">{{description}}</p>
+          </article>
+{{/each}}
+        </div>
+      </section>
+{{/if}}
+{{#if (eq primitive "CTA")}}
+      {/* CTA · id={{id}} · variant={{variant}} */}
+      <div className="text-center py-12">
+        <a
+          href={{{json href}}}
+          className={`inline-block px-6 py-3 rounded ${"{{variant}}" === "secondary" ? "bg-gray-200" : "bg-blue-600 text-white"}`}
+        >
+          {{label}}
+        </a>
+      </div>
+{{/if}}
+{{/each}}
+    </main>
+  );
+}

@@ -11,6 +11,7 @@ export interface HelperBindings {
   kebab: (value: unknown) => string;
   slot: (family: unknown, variant: unknown) => string;
   indent: (n: unknown, text: unknown) => string;
+  eq: (a: unknown, b: unknown) => boolean;
 }
 
 export function makeHelpers(slots: SlotRegistry): HelperBindings {
@@ -43,6 +44,8 @@ export function makeHelpers(slots: SlotRegistry): HelperBindings {
         .map((line, i) => (i === 0 ? line : prefix + line))
         .join("\n");
     },
+
+    eq: (a: unknown, b: unknown): boolean => a === b,
   });
 }
 
@@ -53,4 +56,5 @@ export function registerHelpers(hb: typeof Handlebars, slots: SlotRegistry): voi
   hb.registerHelper("kebab", helpers.kebab);
   hb.registerHelper("slot", helpers.slot);
   hb.registerHelper("indent", helpers.indent);
+  hb.registerHelper("eq", helpers.eq);
 }

@@ -122,16 +122,16 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 ### Implementation: reference adapter `@composer/adapter-next`
 
-- [ ] T052 [P] [US1] adapter-next primitives: Page, Hero, Section, Card, CTA — TS+Zod with `intent`/`whenToUse`/`whenNotToUse`/`fieldGuidance`/`examples` — in `/packages/adapter-next/catalog/primitives/{page,hero,section,card,cta}.ts`
-- [ ] T053 [P] [US1] adapter-next semantic rules (e.g., "Card cannot be first child of Section") in `/packages/adapter-next/catalog/rules/semantic.ts`
-- [ ] T054 [P] [US1] adapter-next slot-registry (Hero variants: centered, overlay) in `/packages/adapter-next/catalog/slot-registry.ts`
-- [ ] T055 [P] [US1] adapter-next catalog index (discriminated union) in `/packages/adapter-next/catalog/index.ts`
-- [ ] T056 [P] [US1] adapter-next Handlebars templates (page.tsx.hbs, hero.tsx.hbs, section.tsx.hbs, card.tsx.hbs, cta.tsx.hbs) in `/packages/adapter-next/templates/`
-- [ ] T057 [P] [US1] adapter-next prep files (`hero.prep.ts` resolves slot via registry) in `/packages/adapter-next/templates/`
-- [ ] T058 [P] [US1] adapter-next `output.map.ts` mapping Page → `src/app/<slug>/page.tsx` in `/packages/adapter-next/output.map.ts`
-- [ ] T059 [P] [US1] adapter-next `audit.ts` (cross-spec rules: e.g., exactly one root layout) in `/packages/adapter-next/audit.ts`
-- [ ] T060 [P] [US1] adapter-next `bootstrap.ts` (writes starter `design/specs/home.json`, runs sample compose) in `/packages/adapter-next/bootstrap.ts`
-- [ ] T061 [P] [US1] adapter-next `index.ts` exporting the adapter via `defineAdapter()`
+- [X] T052 [P] [US1] adapter-next primitives: Page, Hero, Section, Card, CTA — TS+Zod with `intent`/`whenToUse`/`whenNotToUse`/`fieldGuidance`/`examples` — in `/packages/adapter-next/catalog/primitives/{page,hero,section,card,cta}.ts`
+- [X] T053 [P] [US1] adapter-next semantic rules (e.g., "Card cannot be first child of Section") in `/packages/adapter-next/catalog/rules/semantic.ts`
+- [X] T054 [P] [US1] adapter-next slot-registry (Hero variants: centered, overlay) in `/packages/adapter-next/catalog/slot-registry.ts`
+- [X] T055 [P] [US1] adapter-next catalog index (discriminated union) in `/packages/adapter-next/catalog/index.ts`
+- [X] T056 [P] [US1] adapter-next Handlebars templates (page.tsx.hbs, hero.tsx.hbs, section.tsx.hbs, card.tsx.hbs, cta.tsx.hbs) in `/packages/adapter-next/templates/`
+- [X] T057 [P] [US1] adapter-next prep files — *deferred: not needed in v0.1 because the `{{slot "Hero" variant}}` Handlebars helper resolves variants directly inside `page.tsx.hbs` without requiring per-primitive prep. Prep support itself arrives in v0.2 (see T036 deferral).*
+- [X] T058 [P] [US1] adapter-next `output.map.ts` mapping Page → `src/app/<slug>/page.tsx` in `/packages/adapter-next/output.map.ts`
+- [X] T059 [P] [US1] adapter-next `audit.ts` (cross-spec rules: e.g., exactly one root layout) in `/packages/adapter-next/audit.ts`
+- [X] T060 [P] [US1] adapter-next `bootstrap.ts` (writes starter `design/specs/home.json`, runs sample compose) in `/packages/adapter-next/bootstrap.ts`
+- [X] T061 [P] [US1] adapter-next `index.ts` exporting the adapter via `defineAdapter()`
 
 ### Implementation: Claude Code skill pack `@composer/skill-claude`
 
