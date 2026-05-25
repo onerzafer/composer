@@ -1,0 +1,32 @@
+{
+  "name": "@composer/core",
+  "version": "0.1.0-alpha.0",
+  "description": "Composer engine library — discover, scaffold, validate, compose",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
+    "@composer/typescript": "workspace:*",
+    "handlebars": "^4.7.8",
+    "zod": "^3.23.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

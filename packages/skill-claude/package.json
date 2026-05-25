@@ -1,0 +1,13 @@
+{
+  "name": "@composer/skill-claude",
+  "version": "0.1.0-alpha.0",
+  "description": "Claude Code skill pack — prose + MCP config for the Composer agent loop",
+  "license": "MIT",
+  "files": ["SKILL.md", "mcp.json", "prompts"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

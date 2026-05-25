@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "."
+  },
+  "include": ["catalog/**/*.ts", "templates/**/*.ts", "*.ts"],
+  "exclude": ["templates/**/*.hbs", "node_modules", "dist"],
+  "references": [{ "path": "../adapter-kit" }]
+}

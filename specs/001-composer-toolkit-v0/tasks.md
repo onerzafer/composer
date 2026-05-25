@@ -25,13 +25,13 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 **Purpose**: Project initialization and basic structure for the pnpm monorepo.
 
-- [ ] T001 Create `pnpm-workspace.yaml` declaring `packages/*` and `tests` as workspaces
-- [ ] T002 Create root `package.json` with name `composer-monorepo`, private: true, workspaces declared via pnpm, scripts for `build`/`test`/`lint`/`typecheck`
-- [ ] T003 [P] Create `tsconfig.base.json` with strict TS, ES2022, Node module resolution, declaration emit
-- [ ] T004 [P] Create `.eslintrc.json` + `.prettierrc.json` with consistent rules across packages
-- [ ] T005 [P] Create `vitest.config.ts` at root with project-level test discovery + coverage config
-- [ ] T006 [P] Create `LICENSE` (MIT) at `/LICENSE`
-- [ ] T007 Create package skeletons (package.json + tsconfig.json + src/index.ts) under `/packages/{core,mcp,cli,typescript,adapter-kit,adapter-next,skill-claude}/` — each pinned to TypeScript 5.5+, Node >=20
+- [X] T001 Create `pnpm-workspace.yaml` declaring `packages/*` as workspace
+- [X] T002 Create root `package.json` with name `composer-monorepo`, private: true, pnpm packageManager pin, scripts for `build`/`test`/`lint`/`typecheck`
+- [X] T003 [P] Create `tsconfig.base.json` with strict TS (incl. `noUncheckedIndexedAccess`, `composite: true`), ES2022, NodeNext module resolution, declaration emit
+- [X] T004 [P] Create `eslint.config.js` (flat config, ESLint 9) + `.prettierrc.json` with consistent rules across packages — *updated from `.eslintrc.json` per 2026-current standard*
+- [X] T005 [P] Create `vitest.config.ts` at root with project-level test discovery + v8 coverage config
+- [X] T006 [P] Create `LICENSE` (MIT, © 2026 Öner Zafer) at `/LICENSE`
+- [X] T007 Create package skeletons (package.json + tsconfig.json + src/index.ts where applicable) under `/packages/{core,mcp,cli,typescript,adapter-kit,adapter-next,skill-claude}/` — five library packages have full TS skeleton; adapter-next and skill-claude are content-only (no src/index.ts yet)
 
 **Checkpoint**: `pnpm install && pnpm typecheck` passes on an empty codebase.
 
@@ -45,29 +45,29 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 ### `@composer/adapter-kit` (shared types)
 
-- [ ] T008 [P] Implement adapter-kit types (`Adapter`, `OutputMap`, `OutputPath`, `AuditRule`, `PrepFn`, `RenderCtx`, `SlotEntry`, `PrimitiveMeta`) in `/packages/adapter-kit/src/types.ts` per `data-model.md`
-- [ ] T009 [P] Implement `defineAdapter()` helper and common utilities in `/packages/adapter-kit/src/helpers.ts`
-- [ ] T010 [P] Export public API in `/packages/adapter-kit/src/index.ts`
+- [X] T008 [P] Implement adapter-kit types (`Adapter`, `OutputMap`, `OutputPath`, `AuditRule`, `PrepFn`, `RenderCtx`, `SlotEntry`, `PrimitiveMeta`) in `/packages/adapter-kit/src/types.ts` per `data-model.md`
+- [X] T009 [P] Implement `defineAdapter()` helper and common utilities in `/packages/adapter-kit/src/helpers.ts`
+- [X] T010 [P] Export public API in `/packages/adapter-kit/src/index.ts`
 
 ### `@composer/typescript` (catalog-authoring engine)
 
-- [ ] T011 [P] Implement TS catalog loader using `tsx` runtime (per research.md R1) in `/packages/typescript/src/loader.ts` — `loadCatalog(workspacePath) → CompiledCatalog`
-- [ ] T012 [P] Implement Zod schema compilation + mtime-keyed cache in `/packages/typescript/src/compile.ts` — writes `.composer/cache/catalog.compiled.json`
-- [ ] T013 [P] Export public API in `/packages/typescript/src/index.ts`
+- [X] T011 [P] Implement TS catalog loader using `tsx` runtime (per research.md R1) in `/packages/typescript/src/loader.ts` — `loadCatalog(catalogDir) → LoadedCatalog`. *FR-023 (G1 fix) inline: loader is structurally blind to `catalog/ingested/` — imports trace from `catalog/index.ts` only; no directory listing.*
+- [X] T012 [P] Implement Zod schema compilation + mtime-keyed cache in `/packages/typescript/src/compile.ts` — writes `.composer/cache/catalog.compiled.json`
+- [X] T013 [P] Export public API in `/packages/typescript/src/index.ts`
 
 ### `@composer/core` (engine foundations)
 
-- [ ] T014 [P] [Foundational] Implement `composer.json` schema validator in `/packages/core/src/workspace/validate-config.ts` — uses `contracts/composer-json.schema.json` via Ajv
-- [ ] T015 [P] Implement spec-ID validator (regex `^[a-z0-9][a-z0-9-]{0,62}$`, research R13) in `/packages/core/src/workspace/spec-id.ts`
-- [ ] T016 [P] Implement path-traversal protection (research R10) in `/packages/core/src/workspace/path-safety.ts` — every output-map path must resolve under project root
-- [ ] T017 [P] Implement workspace lockfile (FR-CONC-001..004, PID + stale detection) in `/packages/core/src/lock/workspace-lock.ts`
-- [ ] T018 [P] Implement SHA-256 drift hasher with LF normalization (research R11) in `/packages/core/src/drift/hasher.ts`
-- [ ] T019 [P] Implement structured JSON logger (FR-OBS-001/002/003, research R14) in `/packages/core/src/log/logger.ts` — writes to `.composer/logs/<ts>-<spec_id>.json`
-- [ ] T020 [P] Implement Handlebars helpers (`json`, `kebab`, `slot`, `indent`) in `/packages/core/src/render/helpers.ts`
-- [ ] T021 [P] Implement prep sandbox using Node `vm` with restricted globals (research R3, FR-011, FR-017) in `/packages/core/src/render/sandbox.ts`
-- [ ] T022 [P] Implement source-map persistence (data-model §9, research R12) in `/packages/core/src/sourcemap/persist.ts` — `byFile` and `bySpec` indices
-- [ ] T023 Implement workspace resolver (composer.json discovery + read + validate) in `/packages/core/src/workspace/resolve.ts` (depends on T014)
-- [ ] T024 Implement adapter layering (parent + project merge per FR-006/007) in `/packages/core/src/workspace/layer.ts` (depends on T011, T023)
+- [X] T014 [P] Implement `composer.json` schema validator in `/packages/core/src/workspace/validate-config.ts` — *hand-validates against the JSON Schema patterns from `contracts/composer-json.schema.json` (dropped Ajv dep; schema is small enough that direct validation is cheaper than Ajv's ESM-default-export interop).*
+- [X] T015 [P] Implement spec-ID validator (regex `^[a-z0-9][a-z0-9-]{0,62}$`, research R13) in `/packages/core/src/workspace/spec-id.ts`
+- [X] T016 [P] Implement path-traversal protection (research R10) in `/packages/core/src/workspace/path-safety.ts` — every output-map path must resolve under project root
+- [X] T017 [P] Implement workspace lockfile (FR-CONC-001..004, PID + stale detection) in `/packages/core/src/lock/workspace-lock.ts`
+- [X] T018 [P] Implement SHA-256 drift hasher with LF normalization (research R11) in `/packages/core/src/drift/hasher.ts`
+- [X] T019 [P] Implement structured JSON logger (FR-OBS-001/002/003, research R14) in `/packages/core/src/log/logger.ts` — writes to `.composer/logs/<ts>-<spec_id>.json`
+- [X] T020 [P] Implement Handlebars helpers (`json`, `kebab`, `slot`, `indent`) in `/packages/core/src/render/helpers.ts`
+- [X] T021 [P] Implement prep sandbox using Node `vm` with restricted globals (research R3, FR-011, FR-017) in `/packages/core/src/render/sandbox.ts`
+- [X] T022 [P] Implement source-map persistence (data-model §9, research R12) in `/packages/core/src/sourcemap/persist.ts` — `byFile` and `bySpec` indices
+- [X] T023 Implement workspace resolver (composer.json discovery + read + validate) in `/packages/core/src/workspace/resolve.ts` (depends on T014)
+- [X] T024 Implement workspace layering (project-only in v0.1 Foundational scope; parent-adapter `extends:` arrives in US3/T077) in `/packages/core/src/workspace/layer.ts`
 
 **Checkpoint**: Foundation ready — user story implementation can begin in parallel.
 

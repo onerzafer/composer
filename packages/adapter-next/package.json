@@ -1,0 +1,25 @@
+{
+  "name": "@composer/adapter-next",
+  "version": "0.1.0-alpha.0",
+  "description": "Reference Composer adapter for Next.js App Router projects",
+  "license": "MIT",
+  "type": "module",
+  "files": ["catalog", "templates", "output.map.js", "audit.js", "bootstrap.js", "index.js"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "peerDependencies": {
+    "@composer/core": "workspace:*"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
