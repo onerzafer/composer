@@ -1,0 +1,28 @@
+# Composer engine cache
+.composer/cache/
+.composer/logs/
+.composer/staging/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# macOS
+.DS_Store
