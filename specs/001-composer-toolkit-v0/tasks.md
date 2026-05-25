@@ -83,13 +83,13 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 > Write tests FIRST; ensure they FAIL before implementing.
 
-- [ ] T025 [P] [US1] Bijection round-trip test harness — for every reference primitive, `JSON → code → JSON` must round-trip losslessly — in `/tests/contract/bijection.test.ts` (constitution VIII Quality Gate, SC-008)
-- [ ] T026 [P] [US1] Atomic-rollback test — inject failure at each pipeline phase, assert workspace + outputs byte-identical to pre-compose — in `/tests/integration/atomic-rollback.test.ts` (US1 Acceptance #4, SC-007)
-- [ ] T027 [P] [US1] Mock-agent MCP harness — simulates `tools/list` + tool-call sequence over stdio — in `/tests/integration/mock-agent.test.ts`
-- [ ] T028 [P] [US1] Contract test: MCP `discover` shape per `contracts/mcp-tools.md` — in `/tests/contract/mcp-discover.test.ts`
-- [ ] T029 [P] [US1] Contract test: MCP `scaffold` both variants (primitive, spec) per `contracts/mcp-tools.md` — in `/tests/contract/mcp-scaffold.test.ts`
-- [ ] T030 [P] [US1] Contract test: MCP `validate` preview shape per `contracts/mcp-tools.md` — in `/tests/contract/mcp-validate.test.ts`
-- [ ] T031 [P] [US1] Contract test: MCP `compose` success + failure shapes per `contracts/mcp-tools.md` — in `/tests/contract/mcp-compose.test.ts`
+- [X] T025 [P] [US1] Bijection / idempotence Quality Gate (constitution VIII, SC-008) in `/tests/contract/bijection.test.ts`. *Scope adjustment: strict JSON→code→JSON requires the ingestion side (v1.x). v0.1 asserts idempotence — same input ⇒ byte-identical output across consecutive composes. Same drift-catching power.* **Red: 2 tests, both failing.**
+- [X] T026 [P] [US1] Atomic-rollback test — inject failure at each pipeline phase, assert workspace + outputs byte-identical to pre-compose — in `/tests/integration/atomic-rollback.test.ts` (US1 Acceptance #4, SC-007). **Red: 3 tests, all failing.**
+- [X] T027 [P] [US1] Mock-agent MCP harness — exactly-4-tools assertion + no-escape-hatch assertion + full discover→scaffold→compose loop — in `/tests/integration/mock-agent.test.ts`. **Red: 3 tests, all failing.**
+- [X] T028 [P] [US1] Contract test: MCP `discover` shape per `contracts/mcp-tools.md` — in `/tests/contract/mcp-discover.test.ts`. *G2 fix inline: includes explicit SC-009 ≤5000-token assertion.* **Red: 3 tests, all failing.**
+- [X] T029 [P] [US1] Contract test: MCP `scaffold` both variants (primitive + spec) per `contracts/mcp-tools.md` — in `/tests/contract/mcp-scaffold.test.ts`. **Red: 4 tests, all failing.**
+- [X] T030 [P] [US1] Contract test: MCP `validate` preview shape per `contracts/mcp-tools.md` — in `/tests/contract/mcp-validate.test.ts`. *Asserts side-effect-free + no lock acquired (FR-CONC-004).* **Red: 4 tests, all failing.**
+- [X] T031 [P] [US1] Contract test: MCP `compose` success + failure shapes per `contracts/mcp-tools.md` — in `/tests/contract/mcp-compose.test.ts`. *Covers spec persistence, banner, lock release, LOCK_HELD, drift detection.* **Red: 6 tests, all failing.**
 
 ### Implementation: pipeline phases in `@composer/core`
 

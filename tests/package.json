@@ -1,0 +1,17 @@
+{
+  "name": "composer-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Integration and contract tests for the Composer toolkit",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
+    "@composer/core": "workspace:*",
+    "@composer/mcp": "workspace:*",
+    "@composer/typescript": "workspace:*"
+  }
+}
