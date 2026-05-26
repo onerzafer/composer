@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@composer/adapter-kit": "workspace:*",
+    "@composer/adapter-next": "workspace:*",
+    "@composer/cli": "workspace:*",
     "@composer/core": "workspace:*",
     "@composer/mcp": "workspace:*",
     "@composer/typescript": "workspace:*",

@@ -7,7 +7,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "composer": "./dist/index.js"
+    "composer": "./dist/bin.js"
   },
   "exports": {
     ".": {
@@ -24,6 +24,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
     "@composer/core": "workspace:*",
     "commander": "^12.1.0"
   },

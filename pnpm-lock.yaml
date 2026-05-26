@@ -106,6 +106,12 @@ importers:
       '@composer/adapter-kit':
         specifier: workspace:*
         version: link:../packages/adapter-kit
+      '@composer/adapter-next':
+        specifier: workspace:*
+        version: link:../packages/adapter-next
+      '@composer/cli':
+        specifier: workspace:*
+        version: link:../packages/cli
       '@composer/core':
         specifier: workspace:*
         version: link:../packages/core

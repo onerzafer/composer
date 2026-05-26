@@ -18,12 +18,13 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 | Status | Count | Details |
 |---|---|---|
-| **Done** | **66 of 108 (61%)** | T001–T066 ✓ |
-| Remaining | 42 | T067–T108 (US2 + US3 + US4 polish + US5 + Polish) |
-| Tests passing | **28 of 29** | 1 skipped — documented in `docs/v0.2-deferrals.md` #1 |
+| **Done** | **72 of 108 (67%)** | T001–T072 ✓ |
+| Remaining | 36 | T073–T108 (US3 + US4 + US5 + Polish) |
+| Tests passing | **32 of 33** | 1 skipped — documented in `docs/v0.2-deferrals.md` #1 |
 | Build | 8 of 8 packages clean | |
 | User Story 1 | **Closed** ✓ | All 5 acceptance scenarios + SC-001/003/007/008/009 verified |
-| User Stories 2–5 | Remaining | US2 (init), US3 (extends), US4 (drift docs), US5 (explain CLI) |
+| User Story 2 | **Closed** ✓ | All 3 acceptance scenarios verified; SC-002 (≤30s) checked engine-side |
+| User Stories 3–5 | Remaining | US3 (extends), US4 (drift docs), US5 (explain CLI) |
 
 **Session logs**: see `docs/sessions/` for per-session narrative + commit refs.
 
@@ -175,15 +176,15 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 ### Tests for User Story 2 (REQUIRED)
 
-- [ ] T067 [P] [US2] Init flow integration test for `--extends` mode — asserts US2 Acceptance #1 — in `/tests/integration/init-extends.test.ts`
-- [ ] T068 [P] [US2] Init flow integration test for `--bare` mode — asserts US2 Acceptance #3 — in `/tests/integration/init-bare.test.ts`
-- [ ] T069 [P] [US2] Init refuses overwrite test — asserts US2 Acceptance #2 — in `/tests/integration/init-overwrite.test.ts`
+- [X] T067 [P] [US2] Init flow integration test for `--extends` mode — asserts US2 Acceptance #1 — in `/tests/integration/init-extends.test.ts`
+- [X] T068 [P] [US2] Init flow integration test for `--bare` mode — asserts US2 Acceptance #3 — in `/tests/integration/init-bare.test.ts`
+- [X] T069 [P] [US2] Init refuses overwrite test — asserts US2 Acceptance #2 — in `/tests/integration/init-overwrite.test.ts`
 
 ### Implementation: `@composer/cli` (init)
 
-- [ ] T070 [US2] CLI bin entrypoint + commander setup (research R2) in `/packages/cli/src/index.ts`
-- [ ] T071 [US2] `composer init` command (handles both `--extends` and `--bare`, runs sample compose, writes .gitignore) in `/packages/cli/src/commands/init.ts`
-- [ ] T072 [US2] `composer init` refuses to overwrite existing composer.json (exit code 1 per `contracts/cli-commands.md`) in same file as T071
+- [X] T070 [US2] CLI bin entrypoint + commander setup (research R2) — split into `/packages/cli/src/index.ts` (library exports) + `/packages/cli/src/bin.ts` (commander wiring + `process.exit` translation). `package.json` bin field updated to `./dist/bin.js`. Reserved-namespace stubs (`ingest`/`promote`/`migrate` → exit 99) wired here too — early-deliver of T091.
+- [X] T071 [US2] `composer init` command (handles both `--extends` and `--bare`, runs sample compose, writes .gitignore) in `/packages/cli/src/commands/init.ts`. *v0.1 deviation: `--extends` copies the adapter's catalog/templates/output.map into the workspace rather than relying on parent-layering — the layering itself arrives with US3/T077. Project copies will then shadow parent per documented resolution rules.*
+- [X] T072 [US2] `composer init` refuses to overwrite existing composer.json (exit code 1 per `contracts/cli-commands.md`) in same file as T071
 
 **Checkpoint**: Both P1 stories (US1 + US2) functional. A user can fully adopt Composer + use the agent loop end-to-end.
 
