@@ -1,0 +1,53 @@
+# T104/T105/T106 — CI workflow.
+#
+# Security note: this workflow does NOT consume any untrusted input
+# (issue titles, PR bodies, etc.) in `run:` blocks. The only `${{ … }}`
+# interpolations are `${{ matrix.node }}` in field positions (name + with),
+# which are safe per GitHub's workflow-injection guidance.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    name: build + test (Node ${{ matrix.node }})
+    strategy:
+      matrix:
+        node: ["20", "22"]
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm -r build
+
+      - name: Typecheck all packages
+        run: pnpm -r typecheck
+
+      - name: Run test suite (includes bijection check — T105)
+        run: pnpm test
+
+      # T106 — 30-line discipline lint runs via `composer doctor` once a
+      # workspace is composed. Tests exercise doctor end-to-end; an
+      # adapter-level lint runs as part of `pnpm test`.

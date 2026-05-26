@@ -2,7 +2,69 @@
 
 > A methodology and (eventually) a toolkit for **Schema-Compiled Composition (SCC)** — building software by letting LLMs author JSON against a typed grammar of hand-written primitives, then compiling that JSON to real source code.
 
-**Status:** project scaffold. This README compiles everything currently known about the idea, synthesized from:
+**Status:** v0.1-alpha shipping. The toolkit implements the full methodology described below — agent-facing MCP tools, atomic compose pipeline, drift detection, custom-adapter `extends:`, source-map traversal. Polish phase in progress; `npm publish` pending.
+
+---
+
+## 0. Adopting Composer v0.1 (90-second quickstart)
+
+In an empty Node.js / Next.js project:
+
+```bash
+# 1. Install the toolkit
+npm install --save-dev @composer/cli @composer/adapter-next
+
+# 2. Bootstrap the workspace + run one sample compose
+npx composer init --extends @composer/adapter-next
+```
+
+After init you'll have:
+
+```
+composer.json              # { workspace: "./design", engine, extends }
+design/
+  catalog/                 # primitives (Hero, Page, Section, Card, CTA)
+  templates/               # *.tsx.hbs per primitive
+  output.map.ts            # primitive → output path
+  specs/home.json          # the sample spec init seeded
+src/app/home/page.tsx      # the file the sample compose emitted
+```
+
+Then attach an LLM agent that speaks MCP (Claude Code is the reference client):
+
+```bash
+# Install the skill pack
+npm install --save-dev @composer/skill-claude
+# Claude Code picks up @composer/skill-claude/SKILL.md + mcp.json automatically.
+```
+
+The agent now has four MCP tools (`discover`, `scaffold`, `validate`, `compose`) and **only** those four — no read/list/freeform-write escape hatches. Ask it to "compose a pricing page" and watch it call `discover → scaffold → compose`. The generated TSX lands in `src/app/<slug>/page.tsx`.
+
+For human/CI use, the same operations are available as CLI commands:
+
+```bash
+composer compose <spec_id>      # human alternative to the MCP compose tool
+composer validate <spec_id>     # dry-run preview
+composer explain <file>:<line>  # which spec/primitive produced this line?
+composer trace <spec_id>:<line> # where did this spec line emit code?
+composer doctor                 # workspace health check (drift, sprawl, etc.)
+```
+
+### Further reading
+
+- **Methodology overview** (one-page): [`docs/methodology/scc-overview.md`](docs/methodology/scc-overview.md)
+- **5-minute walkthrough**: [`specs/001-composer-toolkit-v0/quickstart.md`](specs/001-composer-toolkit-v0/quickstart.md)
+- **Write a custom adapter** for a non-Next.js target: [`docs/adapters/authoring.md`](docs/adapters/authoring.md)
+- **What's deferred to v0.2**: [`docs/v0.2-deferrals.md`](docs/v0.2-deferrals.md)
+- **Constitution** (engine rules): [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
+
+The rest of this README explains the **why** behind the design — read on if you want the architectural reasoning.
+
+---
+
+## Provenance
+
+This README synthesizes:
 
 - `sifir-ai/docs/wiki/notes/2026-05-07-schema-compiled-composition-methodology.md` (canonical methodology note, with Appendices A & B)
 - The working `.sifir/` instance in `sifir-ai-customer-template-base` (the existence proof)

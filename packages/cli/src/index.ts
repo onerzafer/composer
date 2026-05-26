@@ -27,3 +27,30 @@ export {
   type TraceOptions,
   type TraceResult,
 } from "./commands/trace.js";
+
+export {
+  composeCommand,
+  ComposeCliError,
+  type ComposeCliOptions,
+} from "./commands/compose.js";
+
+export {
+  validateCommand,
+  ValidateCliError,
+  type ValidateCliOptions,
+} from "./commands/validate.js";
+
+export {
+  RESERVED_COMMANDS,
+  ReservedNotImplementedError,
+  type ReservedCommand,
+} from "./commands/reserved.js";
+
+export {
+  doctor,
+  formatDoctorHuman,
+  type DoctorOptions,
+  type DoctorReport,
+  type DoctorIssue,
+  type Severity,
+} from "./commands/doctor.js";
