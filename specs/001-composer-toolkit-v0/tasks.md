@@ -12,6 +12,25 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 
 **Organization**: Tasks are grouped by user story so each story is independently completable and testable.
 
+---
+
+## Progress
+
+| Status | Count | Details |
+|---|---|---|
+| **Done** | **66 of 108 (61%)** | T001–T066 ✓ |
+| Remaining | 42 | T067–T108 (US2 + US3 + US4 polish + US5 + Polish) |
+| Tests passing | **28 of 29** | 1 skipped — documented in `docs/v0.2-deferrals.md` #1 |
+| Build | 8 of 8 packages clean | |
+| User Story 1 | **Closed** ✓ | All 5 acceptance scenarios + SC-001/003/007/008/009 verified |
+| User Stories 2–5 | Remaining | US2 (init), US3 (extends), US4 (drift docs), US5 (explain CLI) |
+
+**Session logs**: see `docs/sessions/` for per-session narrative + commit refs.
+
+**Known deferrals**: see `docs/v0.2-deferrals.md` for the canonical list (catalog caching, prep files, staging+rename hardening, per-line source maps, etc.).
+
+---
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no incomplete-dependency)
