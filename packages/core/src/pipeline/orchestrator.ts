@@ -4,7 +4,7 @@
 // drift, commit). Acquires the workspace lock for compose, NOT for validate
 // (FR-CONC-004). On any failure, the lock is released and nothing is committed.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { tsImport } from "tsx/esm/api";
@@ -13,7 +13,9 @@ import type { OutputMap } from "@composer/adapter-kit";
 import { ENGINE_VERSION } from "../version.js";
 import { resolveWorkspace, type ResolvedWorkspace } from "../workspace/resolve.js";
 import { layerWorkspace, type EffectiveWorkspace } from "../workspace/layer.js";
+import { resolveAndCacheParent, type ResolvedParent } from "../workspace/extends.js";
 import { assertValidSpecId } from "../workspace/spec-id.js";
+import type { AuditRule } from "@composer/adapter-kit";
 import { WorkspaceLock, LockHeldError } from "../lock/workspace-lock.js";
 import { Logger, buildLogPath } from "../log/logger.js";
 import { structuralValidate, StructuralValidationError } from "./phases/structural.js";
@@ -51,7 +53,11 @@ export async function orchestrateCompose(opts: ComposeOptions): Promise<ComposeR
 
   const phase0Start = Date.now();
   const resolved = resolveWorkspace(opts.projectRoot);
-  const workspace = layerWorkspace(resolved.workspaceRoot);
+  let parent: ResolvedParent | null = null;
+  if (resolved.config.extends) {
+    parent = resolveAndCacheParent(resolved.projectRoot, resolved.config.extends);
+  }
+  const workspace = layerWorkspace(resolved.workspaceRoot, parent);
   const phase0Duration = Date.now() - phase0Start;
 
   const logPath = buildLogPath(resolved.workspaceRoot, opts.specId, "compose");
@@ -129,9 +135,11 @@ async function runPipeline(
   workspace: EffectiveWorkspace,
   logger: Logger,
 ): Promise<ComposeResult> {
-  // Phase: compile catalog
+  // Phase: compile catalog — uses the layered catalog path (project's if
+  // present, else parent's). loadCatalog takes the catalog directory, so we
+  // strip the trailing `/index.ts`.
   const tCatalog = Date.now();
-  const loaded = await loadCatalog(join(workspace.root, "catalog"));
+  const loaded = await loadCatalog(dirname(workspace.catalogIndexPath));
   const catalog: CompiledCatalog = compileCatalog(loaded);
   logger.recordPhase({
     phase: "compile-catalog",
@@ -158,13 +166,16 @@ async function runPipeline(
     outcome: "ok",
   });
 
-  // Phase: audit
+  // Phase: audit — parent first, then project (US3 Acceptance #3).
   const tAudit = Date.now();
-  await runAudit([], { catalog, specs: [], tokens: workspace.tokens });
+  const auditRules = await loadAuditChain(workspace);
+  const allSpecs = [{ id: opts.specId, json: parsed }, ...loadSiblingSpecs(workspace.root, opts.specId)];
+  await runAudit(auditRules, { catalog, specs: allSpecs, tokens: workspace.tokens });
   logger.recordPhase({
     phase: "audit",
     duration_ms: Date.now() - tAudit,
     outcome: "ok",
+    meta: { auditCount: auditRules.length },
   });
 
   // Load output map (TS module via tsx)
@@ -235,9 +246,78 @@ async function runPipeline(
 
 async function loadOutputMap(path: string): Promise<OutputMap> {
   const baseUrl = pathToFileURL(dirname(path) + "/").href;
-  const mod = (await tsImport(path, baseUrl)) as Record<string, unknown>;
+  // Support both shipped `.js` (parent) and source `.ts` (project) without
+  // forcing tsImport on a `.js` path — Node's native loader is faster there.
+  let mod: Record<string, unknown>;
+  if (path.endsWith(".js")) {
+    mod = (await import(pathToFileURL(path).href)) as Record<string, unknown>;
+  } else {
+    mod = (await tsImport(path, baseUrl)) as Record<string, unknown>;
+  }
   const exported = (mod["default"] ?? mod) as OutputMap;
   return exported;
+}
+
+async function loadAuditChain(workspace: EffectiveWorkspace): Promise<AuditRule[]> {
+  const rules: AuditRule[] = [];
+  if (workspace.parentAuditPath) {
+    rules.push(await loadAuditModule(workspace.parentAuditPath));
+  }
+  if (workspace.auditPath) {
+    rules.push(await loadAuditModule(workspace.auditPath));
+  }
+  return rules;
+}
+
+/** Process-local cache for loaded audit modules. The tsx loader has a known
+ * deadlock when its module cache is queried under certain repeat-load patterns
+ * (the 3rd-compose hang surfaced wiring T077); avoiding the round-trip
+ * eliminates the trigger. */
+const AUDIT_MODULE_CACHE = new Map<string, AuditRule>();
+
+async function loadAuditModule(path: string): Promise<AuditRule> {
+  const cached = AUDIT_MODULE_CACHE.get(path);
+  if (cached) return cached;
+
+  // Prefer native dynamic-import on shipped .js — fast and never deadlocks.
+  // For .ts (project-authored), fall back to tsImport.
+  let mod: Record<string, unknown>;
+  if (path.endsWith(".js")) {
+    mod = (await import(pathToFileURL(path).href)) as Record<string, unknown>;
+  } else {
+    const baseUrl = pathToFileURL(dirname(path) + "/").href;
+    mod = (await tsImport(path, baseUrl)) as Record<string, unknown>;
+  }
+  const exported = (mod["default"] ?? mod["audit"]) as AuditRule | undefined;
+  if (typeof exported !== "function") {
+    throw new Error(`Audit module ${path} does not export a default audit function`);
+  }
+  AUDIT_MODULE_CACHE.set(path, exported);
+  return exported;
+}
+
+function loadSiblingSpecs(
+  workspaceRoot: string,
+  excludeId: string,
+): { id: string; json: unknown }[] {
+  const specsDir = join(workspaceRoot, "specs");
+  if (!existsSync(specsDir)) return [];
+  // Read all existing specs so cross-spec audits (e.g., unique-name rules)
+  // see the full workspace state. Excludes the spec under compose because
+  // the caller already added the new (parsed) version.
+  const out: { id: string; json: unknown }[] = [];
+  for (const entry of readdirSync(specsDir)) {
+    if (!entry.endsWith(".json")) continue;
+    const id = entry.replace(/\.json$/, "");
+    if (id === excludeId) continue;
+    try {
+      const json = JSON.parse(readFileSync(join(specsDir, entry), "utf8"));
+      out.push({ id, json });
+    } catch {
+      /* skip malformed */
+    }
+  }
+  return out;
 }
 
 function extractSlotRegistry(catalogModule: Record<string, unknown>): import("@composer/adapter-kit").SlotRegistry {

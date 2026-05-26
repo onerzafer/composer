@@ -1,0 +1,20 @@
+{
+  "name": "@composer-test/adapter-keyvalue",
+  "version": "0.1.0",
+  "description": "Tiny custom adapter for US3/T080 — emits .env-style key=value files",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./catalog/*": "./catalog/*",
+    "./templates/*": "./templates/*",
+    "./output.map": "./output.map.js",
+    "./audit": "./audit.js"
+  },
+  "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
+    "zod": "^3.23.0"
+  }
+}

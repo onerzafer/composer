@@ -16,6 +16,15 @@ export { isValidSpecId, assertValidSpecId } from "./workspace/spec-id.js";
 export { assertWithinProject } from "./workspace/path-safety.js";
 export { resolveWorkspace, type ResolvedWorkspace } from "./workspace/resolve.js";
 export { layerWorkspace, type EffectiveWorkspace } from "./workspace/layer.js";
+export {
+  resolveAndCacheParent,
+  resolveParentPackage,
+  walkExtendsChain,
+  stripVersionPin,
+  ExtendsResolutionError,
+  ExtendsCycleError,
+  type ResolvedParent,
+} from "./workspace/extends.js";
 
 // Lock
 export {
