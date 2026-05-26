@@ -11,3 +11,19 @@ export {
   type InitOptions,
   type InitResult,
 } from "./commands/init.js";
+
+export {
+  explain,
+  ExplainError,
+  formatExplainHuman,
+  type ExplainOptions,
+  type ExplainResult,
+} from "./commands/explain.js";
+
+export {
+  trace,
+  TraceError,
+  formatTraceHuman,
+  type TraceOptions,
+  type TraceResult,
+} from "./commands/trace.js";

@@ -6,7 +6,17 @@
 // that calls process.exit() so the library remains testable.
 
 import { Command } from "commander";
-import { CLI_VERSION, init, InitError } from "./index.js";
+import {
+  CLI_VERSION,
+  init,
+  InitError,
+  explain,
+  ExplainError,
+  formatExplainHuman,
+  trace,
+  TraceError,
+  formatTraceHuman,
+} from "./index.js";
 
 const program = new Command();
 program
@@ -44,6 +54,40 @@ program
     }
   });
 
+program
+  .command("explain <target>")
+  .description("Find the spec node that produced a given <file>:<line> in generated code")
+  .option("--json", "Machine-readable output")
+  .action((target: string, opts: { json?: boolean }) => {
+    try {
+      const result = explain({ projectRoot: process.cwd(), target });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else {
+        process.stdout.write(formatExplainHuman(result));
+      }
+    } catch (err) {
+      handleError(err, opts.json);
+    }
+  });
+
+program
+  .command("trace <target>")
+  .description("Find every generated output span originating from <spec_id>:<line>")
+  .option("--json", "Machine-readable output")
+  .action((target: string, opts: { json?: boolean }) => {
+    try {
+      const result = trace({ projectRoot: process.cwd(), target });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else {
+        process.stdout.write(formatTraceHuman(result));
+      }
+    } catch (err) {
+      handleError(err, opts.json);
+    }
+  });
+
 // Reserved-namespace stubs (FR-022 / T091). Documented in --help so the CLI
 // namespace is stable for v1.x.
 for (const reserved of ["ingest", "promote", "migrate"] as const) {
@@ -61,7 +105,7 @@ for (const reserved of ["ingest", "promote", "migrate"] as const) {
 program.parseAsync(process.argv).catch((err: unknown) => handleError(err, false));
 
 function handleError(err: unknown, asJson: boolean | undefined): never {
-  if (err instanceof InitError) {
+  if (err instanceof InitError || err instanceof ExplainError || err instanceof TraceError) {
     if (asJson) {
       process.stderr.write(
         JSON.stringify({ ok: false, exitCode: err.exitCode, message: err.message }) + "\n",

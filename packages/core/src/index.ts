@@ -36,6 +36,19 @@ export {
 
 // Drift
 export { hashFile, hashContent } from "./drift/hasher.js";
+export {
+  buildDriftAbortReport,
+  formatDriftAbortHuman,
+  type DriftAbortReport,
+} from "./drift/abort.js";
+export {
+  emptyHashStore,
+  hashStorePath,
+  loadHashStore,
+  recordCompose,
+  saveHashStore,
+  type OutputHashStore,
+} from "./drift/hashes.js";
 
 // Log
 export {
