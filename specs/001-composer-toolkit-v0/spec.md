@@ -4,7 +4,7 @@
 
 **Created**: 2026-05-25
 
-**Status**: Draft
+**Status**: v0.1 in development — **US1 closed** (66/108 tasks done, 28/29 tests passing); US2–US5 + Polish remaining. See `tasks.md` for granular state, `docs/sessions/` for session logs, `docs/v0.2-deferrals.md` for known follow-ups.
 
 **Input**: User description: "Composer v0.1 — Schema-Compiled Composition toolkit. Core engine library, MCP server, CLI, TypeScript catalog-authoring engine, Next.js reference adapter, Claude Code skill pack. Lets any LLM coding agent attach to a project and execute the `discover → scaffold → [validate?] → compose` loop. Output: hand-quality source code in any target language, emitted from human-authored Handlebars templates."
 
