@@ -70,7 +70,8 @@ description: "Task list for 003-ingest-promote"
 - [X] T017 [P] Extend `composer doctor`'s 30-line report to cover ingested/promoted templates (FR-010).
 - [X] T018 [P] Assert the gate mechanically: a test confirming there is NO MCP `ingest`/`promote` tool and the agent surface is unchanged (FR-004/SC-004).
 - [X] T019 [P] Docs: an "Ingesting existing code" section (README/docs) covering ingest→review→promote and authoring an ingester via the SDK.
-- [X] T020 Full gate: `pnpm -r build && pnpm test`; confirm 0 regressions.
+- [ ] T020 [P] Make `composer promote` run the quality gate as a **blocking precondition** — refuse a draft failing the available checks (bijection round-trip, 30-line, structural validity) unless `--force` (records the overridden findings). Shared gate driven by `004` FR-007/SC-002; `004` enriches the check set (metadata-completeness + total-functional).
+- [X] T021 Full gate: `pnpm -r build && pnpm test`; confirm 0 regressions.
 
 ---
 
@@ -80,7 +81,7 @@ description: "Task list for 003-ingest-promote"
 - US1: tests (T005–T007) RED → impl (T008–T010) → T011 GREEN. T009/T010 touch CLI + reserved.ts (sequential on reserved.ts).
 - US2 (T012–T014) builds on US1's react plugin (T013 refactors it).
 - US3 (T015–T016) builds on the parser interface (T004) + SDK (T012).
-- Polish (T017–T020) last; T020 is the final gate.
+- Polish (T017–T021) last; T021 is the final gate.
 
 ## Implementation Strategy
 

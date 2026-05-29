@@ -73,7 +73,7 @@ A developer adds a new primitive to a catalog that already has several, and the 
 
 ### Edge Cases
 
-- **Staging is inert.** Drafts MUST NOT affect the live catalog, `discover`, `scaffold`, or `compose` until promoted (mirrors the `003` quarantine + the engine-ignored `catalog/ingested/` mechanism).
+- **Staging is inert.** Drafts MUST NOT affect the live catalog, `discover`, `scaffold`, or `compose` until promoted (the engine-ignored `003` staging dir, `catalog/ingested/`).
 - **Oversized template.** A drafted template exceeding the 30-line discipline MUST be flagged for decomposition, never silently promoted.
 - **Control-flow-shaped request.** If the interview surfaces a primitive that wants conditionals/loops, the workflow MUST steer it toward a declarative encoding (e.g., a fixed `forEach`-style primitive) rather than admit control flow (Constitution VIII).
 - **Name collision on promote.** Promoting a draft whose name already exists in the live catalog MUST stop with a clear message; the human resolves it.
@@ -85,14 +85,14 @@ A developer adds a new primitive to a catalog that already has several, and the 
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST provide a guided authoring workflow for the grammar covering the full phase set — specify (intent → brief), clarify (interview), plan (catalog design), tasks (authoring task list), author (draft to staging), and checklist/analyze (quality) — all delivered in v1, runnable at authoring time.
+- **FR-001**: The system MUST provide a guided authoring workflow for the grammar covering the full phase set — specify (intent → brief), clarify (interview), plan (catalog design), tasks (authoring task list), author (draft to staging), and checklist (quality) — all delivered in v1, runnable at authoring time.
 - **FR-002**: The clarify phase MUST run an interactive, recommend-first interview that asks a small number (≤5 per round) of high-impact questions eliciting primitive boundaries, fields/props, composition rules, output mapping, naming, and decomposition points; each question offers a recommended answer the human can accept or override.
 - **FR-003**: The author phase MUST write drafted grammar (schema + template + metadata) ONLY to a staging area that the engine ignores; drafting MUST NOT change the live catalog.
 - **FR-004** (the gate — non-negotiable): A drafted primitive MUST enter the live catalog ONLY via an explicit human **`promote`**; nothing the AI produces activates without it. `promote` is the single activation verb shared with `003` (one word across ingest and authoring).
 - **FR-005**: The workflow MUST be delivered as authoring-time **AI skills** (run in the developer's own agent, like spec-kit's own commands) for the interview and drafting, **plus deterministic composer CLI commands** for the `promote` gate and the quality checks. It MUST NOT add any tool to the **composer MCP/agent surface** (Constitution IV); the composer runtime agent's tool set (`discover`/`scaffold`/`validate`/`compose`) is unchanged.
 - **FR-006**: The workflow MUST steer authored grammar toward the 30-line discipline (flag/decompose oversized templates) and away from control-flow primitives (Constitution VIII); drafts violating either MUST be flagged before promote.
-- **FR-007**: The system MUST provide a pre-promote quality report covering: round-trip (bijection) stability, the 30-line discipline, presence of `whenNotToUse` + ≥1 example, coherence across schema/template/output-mapping/metadata, and absence of control-flow primitives. (May reuse/extend `composer doctor`.)
-- **FR-008**: The workflow MUST treat the SCC constitution as the authority; it MUST NOT produce or promote a primitive that violates a MUST principle.
+- **FR-007**: The system MUST provide a pre-promote quality report covering: round-trip (bijection) stability, the 30-line discipline, presence of `whenNotToUse` + ≥1 example, coherence across schema/template/output-mapping/metadata, and absence of control-flow primitives. (May reuse/extend `composer doctor`.) Furthermore, `promote` MUST treat this report as a **blocking precondition**: a draft failing any check is refused unless an explicit `--force` override is supplied, which records the overridden findings. Because `promote` is the gate shared with `003`, this precondition applies to ingested drafts as well.
+- **FR-008**: The quality gate MUST mechanically enforce the per-primitive **checkable** constitution principles — V (30-line), VIII (total-functional / no control-flow), and X (metadata-as-API completeness). Other principles (e.g., I, II, IV — which are architectural, not per-primitive properties) are upheld by human review at the `promote` gate, not by an automated check.
 - **FR-009**: Promoted primitives MUST be indistinguishable from hand-authored ones — composable, referenceable as children, subject to the same validation/drift/bijection rules — and usable by the existing compose runtime with no further steps.
 - **FR-010**: The feature MUST **reuse `003`'s staging + `promote` gate** rather than build its own; it depends on `003`'s ingestion infrastructure (sequence `003` → `004`), so the forward (intent→grammar) and reverse (code→grammar) authoring assists converge on one human-owned catalog through one gate.
 
@@ -112,7 +112,7 @@ A developer adds a new primitive to a catalog that already has several, and the 
 - **SC-002**: 100% of promoted primitives pass the quality gate (bijection, 30-line, metadata completeness, no control-flow); nothing that fails the gate can be promoted without an explicit override decision.
 - **SC-003**: With drafts present in staging, `discover`, `scaffold`, and `compose` behave identically to no-drafts (staging is inert) — verified in an automated test.
 - **SC-004**: There is no composer MCP/agent path to author or promote grammar; the composer runtime agent's tool surface is unchanged (verified by the absence of any new MCP tool).
-- **SC-005**: The interview resolves the high-impact authoring decisions in ≤5 questions per round and yields a brief a human can review in a single sitting.
+- **SC-005**: The interview resolves the high-impact authoring decisions in ≤5 questions per round, recording each accepted answer in the vocabulary brief.
 
 ## Assumptions
 
