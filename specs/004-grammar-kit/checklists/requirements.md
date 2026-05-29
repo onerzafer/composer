@@ -33,4 +33,4 @@
 
 - Domain vocabulary (primitive, catalog, schema, template, bijection, 30-line, control-flow primitive) is used as *Composer's own domain language*, not as implementation prescription — this is meta-tooling for the toolkit, so those terms are the subject matter. The FRs/SCs stay capability-level (WHAT the workflow guarantees) and defer HOW to the plan.
 - Load-bearing requirement: **FR-004 (the human accept gate)** + **FR-005 (no agent/MCP surface)** — these keep the feature on the constitution-clean side of "extend the vocabulary" (it guides a human; it never lets the agent grow the grammar).
-- Open scoping question for `/speckit-clarify` or `/speckit-plan`: how much of the phase set lands in v1 (recommend: the clarify interview + author-to-staging + accept + quality gate; specify/plan/tasks phases can be thinner first).
+- Resolved via `/speckit-clarify` (Session 2026-05-29): v1 ships the **full phase set**; delivery is **AI skills + composer CLI**; the staging/gate is **reused from `003`** (sequence `003` → `004`); the activation verb is **`promote`** (one verb across ingest and authoring).
