@@ -254,8 +254,23 @@ async function loadOutputMap(path: string): Promise<OutputMap> {
   } else {
     mod = (await tsImport(path, baseUrl)) as Record<string, unknown>;
   }
-  const exported = (mod["default"] ?? mod) as OutputMap;
-  return exported;
+  let exported = (mod["default"] ?? mod) as Record<string, unknown>;
+  // CommonJS-host interop: when the host project's package.json has no
+  // "type":"module", tsx transpiles this module to CommonJS and Node's CJS→ESM
+  // interop double-wraps the default export, yielding `{ default: { byPrimitive }}`.
+  // Descend one level when the expected `byPrimitive` shape is nested deeper.
+  // Shape-aware so ESM hosts (whose default already has byPrimitive) are untouched.
+  if (
+    exported &&
+    typeof exported === "object" &&
+    !("byPrimitive" in exported) &&
+    typeof exported["default"] === "object" &&
+    exported["default"] !== null &&
+    "byPrimitive" in (exported["default"] as Record<string, unknown>)
+  ) {
+    exported = exported["default"] as Record<string, unknown>;
+  }
+  return exported as unknown as OutputMap;
 }
 
 async function loadAuditChain(workspace: EffectiveWorkspace): Promise<AuditRule[]> {
@@ -288,12 +303,20 @@ async function loadAuditModule(path: string): Promise<AuditRule> {
     const baseUrl = pathToFileURL(dirname(path) + "/").href;
     mod = (await tsImport(path, baseUrl)) as Record<string, unknown>;
   }
-  const exported = (mod["default"] ?? mod["audit"]) as AuditRule | undefined;
+  let exported = (mod["default"] ?? mod["audit"]) as unknown;
+  // Same CommonJS-host interop unwrap as loadOutputMap: in a CJS host the audit
+  // function may be nested one `default` deeper.
+  if (typeof exported !== "function" && exported && typeof exported === "object") {
+    const inner =
+      (exported as Record<string, unknown>)["default"] ??
+      (exported as Record<string, unknown>)["audit"];
+    if (typeof inner === "function") exported = inner;
+  }
   if (typeof exported !== "function") {
     throw new Error(`Audit module ${path} does not export a default audit function`);
   }
-  AUDIT_MODULE_CACHE.set(path, exported);
-  return exported;
+  AUDIT_MODULE_CACHE.set(path, exported as AuditRule);
+  return exported as AuditRule;
 }
 
 function loadSiblingSpecs(

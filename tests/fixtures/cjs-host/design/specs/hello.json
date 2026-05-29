@@ -1,0 +1,5 @@
+{
+  "primitive": "Note",
+  "id": "hello",
+  "text": "hello from cjs host"
+}

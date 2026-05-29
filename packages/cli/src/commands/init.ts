@@ -150,6 +150,16 @@ export async function init(options: InitOptions): Promise<InitResult> {
   mkdirSync(join(workspaceRoot, "templates"), { recursive: true });
   mkdirSync(join(workspaceRoot, "specs"), { recursive: true });
 
+  // Author the workspace as ESM regardless of the host project's module system.
+  // In a CommonJS host (no "type":"module"), tsx transpiles the workspace's
+  // output.map.ts to CJS and Node's interop double-wraps its default export,
+  // breaking compose. A workspace-local package.json keeps these modules ESM.
+  const workspacePkgPath = join(workspaceRoot, "package.json");
+  if (!existsSync(workspacePkgPath)) {
+    writeFileSync(workspacePkgPath, JSON.stringify({ type: "module" }, null, 2) + "\n", "utf8");
+    filesWritten.push(workspaceRelPath(projectRoot, workspaceRoot, "package.json"));
+  }
+
   let extendsField: string | undefined;
   let sampleSpecId: string | null = null;
 

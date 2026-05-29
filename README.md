@@ -50,6 +50,25 @@ composer trace <spec_id>:<line> # where did this spec line emit code?
 composer doctor                 # workspace health check (drift, sprawl, etc.)
 ```
 
+### Backend & CommonJS hosts (NestJS, Express, plain Node)
+
+Composer works in CommonJS host projects (a `package.json` **without** `"type": "module"`), not just ESM repos. Three things to know when instrumenting a backend:
+
+- **Workspace stays ESM.** The `design/` workspace authors its modules (`catalog/index.ts`, `output.map.ts`, audit) as ES modules. `composer init` writes a `design/package.json` containing `{"type":"module"}` for you; if you hand-author the workspace, add that file yourself. (Without it, the TypeScript loader transpiles the workspace to CommonJS and the engine compensates — but the explicit `type:module` is the intended setup.)
+- **Exclude the workspace from your app's TypeScript build.** The workspace authoring files are tooling, not application source. Add the workspace dir to your host `tsconfig` `exclude` (and `tsconfig.build.json` if you have one):
+
+  ```jsonc
+  { "exclude": ["node_modules", "dist", "design"] }
+  ```
+
+- **NestJS 11 + GraphQL** runs on Express 5, so Apollo needs the Express-5 integration package alongside the usual GraphQL deps:
+
+  ```bash
+  npm i @nestjs/graphql @nestjs/apollo @apollo/server graphql @as-integrations/express5
+  ```
+
+A worked example — a NestJS GraphQL API generated from Composer primitives for a simulated database and a simulated JWT guard — composes, builds, boots, and enforces auth end-to-end.
+
 ### Further reading
 
 - **Methodology overview** (one-page): [`docs/methodology/scc-overview.md`](docs/methodology/scc-overview.md)
