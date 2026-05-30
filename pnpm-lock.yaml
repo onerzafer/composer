@@ -56,6 +56,9 @@ importers:
       '@composer/core':
         specifier: workspace:*
         version: link:../core
+      '@composer/ingest-kit':
+        specifier: workspace:*
+        version: link:../ingest-kit
       commander:
         specifier: ^12.1.0
         version: 12.1.0
@@ -139,6 +142,12 @@ importers:
       '@composer/core':
         specifier: workspace:*
         version: link:../packages/core
+      '@composer/ingest-kit':
+        specifier: workspace:*
+        version: link:../packages/ingest-kit
+      '@composer/ingest-react':
+        specifier: workspace:*
+        version: link:../packages/ingest-react
       '@composer/mcp':
         specifier: workspace:*
         version: link:../packages/mcp

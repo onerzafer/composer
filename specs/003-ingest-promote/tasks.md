@@ -37,16 +37,16 @@ description: "Task list for 003-ingest-promote"
 
 ### Tests first (RED)
 
-- [ ] T005 [P] [US1] `tests/integration/ingest-quarantine.test.ts` — after `ingest`, a draft exists in `catalog/ingested/` AND `discover`/`compose` are byte-identical to no-draft (SC-002). RED.
-- [ ] T006 [P] [US1] `tests/integration/promote.test.ts` — `promote` moves a draft to the live catalog; name-collision is refused (FR-002/FR-007). RED.
-- [ ] T007 [P] [US1] `tests/fixtures/ingest-react/` — a sample `.tsx` component with typed props to ingest.
+- [X] T005 [P] [US1] `tests/integration/ingest-quarantine.test.ts` — after `ingest`, a draft exists in `catalog/ingested/` AND `discover`/`compose` are byte-identical to no-draft (SC-002). RED.
+- [X] T006 [P] [US1] `tests/integration/promote.test.ts` — `promote` moves a draft to the live catalog; name-collision is refused (FR-002/FR-007). RED.
+- [X] T007 [P] [US1] `tests/fixtures/ingest-react/` — a sample `.tsx` component with typed props to ingest.
 
 ### Implementation (GREEN)
 
-- [ ] T008 [US1] Implement `@composer/ingest-react`: TSX prop-types → candidate primitive (Zod schema + draft template + metadata stub) via the TS-compiler backend.
-- [ ] T009 [US1] Implement `composer ingest <plugin> <source>` in `packages/cli/src/commands/ingest.ts` (CLI-only; resolves the plugin, runs it, writes to quarantine). Remove `ingest` from the reserved exit-99 set in `packages/cli/src/commands/reserved.ts`.
-- [ ] T010 [US1] Implement `composer promote <draft>` in `packages/cli/src/commands/promote.ts` (moves draft → `catalog/primitives/`; refuses overwrite). Remove `promote` from the reserved set.
-- [ ] T011 [US1] Wire both commands into the CLI binary; rebuild; confirm T005/T006 GREEN and a promoted primitive composes (incl. as an inline/slot child).
+- [X] T008 [US1] Implement `@composer/ingest-react`: TSX prop-types → candidate primitive (Zod schema + draft template + metadata stub) via the TS-compiler backend.
+- [X] T009 [US1] Implement `composer ingest <plugin> <source>` in `packages/cli/src/commands/ingest.ts` (CLI-only; resolves the plugin, runs it, writes to quarantine). Remove `ingest` from the reserved exit-99 set in `packages/cli/src/commands/reserved.ts`.
+- [X] T010 [US1] Implement `composer promote <draft>` in `packages/cli/src/commands/promote.ts` (moves draft → `catalog/primitives/`; refuses overwrite). Remove `promote` from the reserved set.
+- [X] T011 [US1] Wire both commands into the CLI binary; rebuild; confirm T005/T006 GREEN and a promoted primitive composes (incl. as an inline/slot child).
 
 **Checkpoint**: end-to-end ingest→review→promote→compose works; drafts proven inert pre-promote.
 

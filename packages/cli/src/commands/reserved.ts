@@ -4,7 +4,9 @@
 // v1.x. v0.1 prints a one-line "not implemented" message and exits 99.
 // The bin wrapper iterates RESERVED_COMMANDS and registers each.
 
-export const RESERVED_COMMANDS = ["ingest", "promote", "migrate"] as const;
+// `ingest` and `promote` are both implemented as of 003 (see ./ingest.ts and
+// ./promote.ts). Only `migrate` remains reserved for v1.x.
+export const RESERVED_COMMANDS = ["migrate"] as const;
 export type ReservedCommand = (typeof RESERVED_COMMANDS)[number];
 
 export function reservedNotImplemented(name: ReservedCommand): never {

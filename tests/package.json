@@ -15,6 +15,8 @@
     "@composer/core": "workspace:*",
     "@composer/mcp": "workspace:*",
     "@composer/typescript": "workspace:*",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "@composer/ingest-kit": "workspace:*",
+    "@composer/ingest-react": "workspace:*"
   }
 }

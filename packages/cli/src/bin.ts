@@ -24,6 +24,10 @@ import {
   ReservedNotImplementedError,
   doctor,
   formatDoctorHuman,
+  promote,
+  PromoteError,
+  ingestCommand,
+  IngestCliError,
 } from "./index.js";
 
 const program = new Command();
@@ -163,6 +167,53 @@ program
     if (!report.ok) process.exit(1);
   });
 
+program
+  .command("ingest <plugin> <source>")
+  .description("Derive a candidate primitive draft from existing source (writes to the quarantine; engine-ignored until promoted)")
+  .option("--json", "Machine-readable output")
+  .action(async (plugin: string, source: string, opts: { json?: boolean }) => {
+    try {
+      const result = await ingestCommand({ projectRoot: process.cwd(), plugin, source });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else {
+        process.stdout.write(
+          `composer: ingested ${result.drafts.length} draft(s) in ${result.elapsedMs}ms\n` +
+            result.drafts.map((d) => `  draft  ${d.name}\n    schema:   ${d.schemaPath}\n    template: ${d.templatePath}`).join("\n") +
+            "\n",
+        );
+      }
+    } catch (err) {
+      handleError(err, opts.json);
+    }
+  });
+
+program
+  .command("promote <draft>")
+  .description("Move a quarantined draft into the live catalog (the human gate)")
+  .option("--force", "Reserved for 004 quality-precondition override; ignored in v0.1")
+  .option("--json", "Machine-readable output")
+  .action(async (draft: string, opts: { force?: boolean; json?: boolean }) => {
+    try {
+      const result = await promote({
+        projectRoot: process.cwd(),
+        draftName: draft,
+        force: opts.force,
+      });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else {
+        process.stdout.write(
+          `composer: promoted ${draft} in ${result.elapsedMs}ms\n` +
+            `  schema:   ${result.schemaTarget}\n` +
+            `  template: ${result.templateTarget}\n`,
+        );
+      }
+    } catch (err) {
+      handleError(err, opts.json);
+    }
+  });
+
 // Reserved-namespace stubs (FR-022 / T091). Documented in --help so the CLI
 // namespace is stable for v1.x.
 for (const reserved of RESERVED_COMMANDS) {
@@ -183,6 +234,8 @@ function handleError(err: unknown, asJson: boolean | undefined): never {
     err instanceof TraceError ||
     err instanceof ComposeCliError ||
     err instanceof ValidateCliError ||
+    err instanceof PromoteError ||
+    err instanceof IngestCliError ||
     err instanceof ReservedNotImplementedError
   ) {
     if (asJson) {

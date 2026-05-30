@@ -13,6 +13,20 @@ export {
 } from "./commands/init.js";
 
 export {
+  promote,
+  PromoteError,
+  type PromoteOptions,
+  type PromoteResult,
+} from "./commands/promote.js";
+
+export {
+  ingestCommand,
+  IngestCliError,
+  type IngestCliOptions,
+  type IngestCliResult,
+} from "./commands/ingest.js";
+
+export {
   explain,
   ExplainError,
   formatExplainHuman,

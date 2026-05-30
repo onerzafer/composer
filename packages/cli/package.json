@@ -15,7 +15,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -26,7 +28,8 @@
   "dependencies": {
     "@composer/adapter-kit": "workspace:*",
     "@composer/core": "workspace:*",
-    "commander": "^12.1.0"
+    "commander": "^12.1.0",
+    "@composer/ingest-kit": "workspace:*"
   },
   "engines": {
     "node": ">=20"
