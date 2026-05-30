@@ -24,10 +24,10 @@ description: "Task list for 003-ingest-promote"
 
 ## Phase 1: Setup & Foundational
 
-- [ ] T001 Scaffold `packages/ingest-kit/` (package.json, tsconfig, src/index.ts) — the SDK + shared orchestration types.
-- [ ] T002 [P] Scaffold `packages/ingest-react/` (package.json depending on ingest-kit + a type-aware TS analysis lib).
-- [ ] T003 Define the draft/candidate-primitive shape + quarantine writer in `packages/ingest-kit/src/draft.ts` (writes only to `design/catalog/ingested/`).
-- [ ] T004 Define the pluggable parse-layer interface in `packages/ingest-kit/src/parser/index.ts` (source → analyzable tree + type-resolution hook); implement the TypeScript-compiler backend.
+- [X] T001 Scaffold `packages/ingest-kit/` (package.json, tsconfig, src/index.ts) — the SDK + shared orchestration types.
+- [X] T002 [P] Scaffold `packages/ingest-react/` (package.json depending on ingest-kit + a type-aware TS analysis lib).
+- [X] T003 Define the draft/candidate-primitive shape + quarantine writer in `packages/ingest-kit/src/draft.ts` (writes only to `design/catalog/ingested/`).
+- [X] T004 Define the pluggable parse-layer interface in `packages/ingest-kit/src/parser/index.ts` (source → analyzable tree + type-resolution hook); implement the TypeScript-compiler backend.
 
 ## Phase 2: User Story 1 — Ingest a component & reuse it (Priority: P1) 🎯 MVP
 

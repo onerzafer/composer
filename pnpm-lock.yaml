@@ -50,6 +50,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@composer/adapter-kit':
+        specifier: workspace:*
+        version: link:../adapter-kit
       '@composer/core':
         specifier: workspace:*
         version: link:../core
@@ -77,6 +80,27 @@ importers:
       zod-to-json-schema:
         specifier: ^3.23.0
         version: 3.25.2(zod@3.25.76)
+
+  packages/ingest-kit:
+    dependencies:
+      '@composer/adapter-kit':
+        specifier: workspace:*
+        version: link:../adapter-kit
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+      zod:
+        specifier: ^3.23.0
+        version: 3.25.76
+
+  packages/ingest-react:
+    dependencies:
+      '@composer/ingest-kit':
+        specifier: workspace:*
+        version: link:../ingest-kit
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
 
   packages/mcp:
     dependencies:
