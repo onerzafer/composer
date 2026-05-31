@@ -1,5 +1,7 @@
 # Composer
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > A methodology and (eventually) a toolkit for **Schema-Compiled Composition (SCC)** — building software by letting LLMs author JSON against a typed grammar of hand-written primitives, then compiling that JSON to real source code.
 
 **Status:** v0.1-alpha shipping. The toolkit implements the full methodology described below — agent-facing MCP tools, atomic compose pipeline, drift detection, custom-adapter `extends:`, source-map traversal. Polish phase in progress; `npm publish` pending.
