@@ -54,23 +54,23 @@ description: "Task list for 003-ingest-promote"
 
 **Goal**: an adapter author can ship an ingester via the SDK, paired with the adapter; round-trip is testable.
 
-- [ ] T012 [US2] Implement `defineIngester()` in `packages/ingest-kit/src/define-ingester.ts` (codec contract: parser backend + AST→primitive + emit-template), symmetric with `defineAdapter`.
-- [ ] T013 [US2] Refactor `@composer/ingest-react` to be authored via `defineIngester` (dogfood the SDK).
-- [ ] T014 [US2] `tests/contract/ingest-bijection.test.ts` — for a paired adapter+ingester (reuse the keyvalue or react fixture), ingest → compose → re-ingest round-trips the JSON (FR-009/SC-003).
+- [X] T012 [US2] Implement `defineIngester()` in `packages/ingest-kit/src/define-ingester.ts` (codec contract: parser backend + AST→primitive + emit-template), symmetric with `defineAdapter`.
+- [X] T013 [US2] Refactor `@composer/ingest-react` to be authored via `defineIngester` (dogfood the SDK).
+- [X] T014 [US2] `tests/contract/ingest-bijection.test.ts` — for a paired adapter+ingester (reuse the keyvalue or react fixture), ingest → compose → re-ingest round-trips the JSON (FR-009/SC-003).
 
 ## Phase 4: User Story 3 — Non-TS parser backend (Priority: P3)
 
 **Goal**: prove the parse layer is pluggable beyond the TS compiler.
 
-- [ ] T015 [P] [US3] Add a tree-sitter (or format-native) parser backend behind the same `parser` interface in `packages/ingest-kit/src/parser/`.
-- [ ] T016 [US3] Implement a minimal non-TS ingester (e.g. a tiny `key=value` or SQL-DDL source) using that backend; assert `composer ingest` uses the alternate parser (SC-005).
+- [X] T015 [P] [US3] Add a tree-sitter (or format-native) parser backend behind the same `parser` interface in `packages/ingest-kit/src/parser/`.
+- [X] T016 [US3] Implement a minimal non-TS ingester (e.g. a tiny `key=value` or SQL-DDL source) using that backend; assert `composer ingest` uses the alternate parser (SC-005).
 
 ## Phase 5: Polish & Cross-Cutting
 
-- [ ] T017 [P] Extend `composer doctor`'s 30-line report to cover ingested/promoted templates (FR-010).
-- [ ] T018 [P] Assert the gate mechanically: a test confirming there is NO MCP `ingest`/`promote` tool and the agent surface is unchanged (FR-004/SC-004).
-- [ ] T019 [P] Docs: an "Ingesting existing code" section (README/docs) covering ingest→review→promote and authoring an ingester via the SDK.
-- [ ] T020 Full gate: `pnpm -r build && pnpm test`; confirm 0 regressions.
+- [X] T017 [P] Extend `composer doctor`'s 30-line report to cover ingested/promoted templates (FR-010).
+- [X] T018 [P] Assert the gate mechanically: a test confirming there is NO MCP `ingest`/`promote` tool and the agent surface is unchanged (FR-004/SC-004).
+- [X] T019 [P] Docs: an "Ingesting existing code" section (README/docs) covering ingest→review→promote and authoring an ingester via the SDK.
+- [X] T020 Full gate: `pnpm -r build && pnpm test`; confirm 0 regressions.
 
 ---
 

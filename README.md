@@ -74,6 +74,7 @@ A worked example — a NestJS GraphQL API generated from Composer primitives for
 - **Methodology overview** (one-page): [`docs/methodology/scc-overview.md`](docs/methodology/scc-overview.md)
 - **5-minute walkthrough**: [`specs/001-composer-toolkit-v0/quickstart.md`](specs/001-composer-toolkit-v0/quickstart.md)
 - **Write a custom adapter** for a non-Next.js target: [`docs/adapters/authoring.md`](docs/adapters/authoring.md)
+- **Ingest existing code** into the catalog (`ingest` → review → `promote`): [`docs/adapters/ingesting.md`](docs/adapters/ingesting.md)
 - **What's deferred to v0.2**: [`docs/v0.2-deferrals.md`](docs/v0.2-deferrals.md)
 - **Constitution** (engine rules): [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
 

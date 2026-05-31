@@ -199,22 +199,20 @@ function runSprawlReport(workspaceRoot: string): DoctorIssue[] {
   return out;
 }
 
-// T095 — 30-line discipline (constitution V)
+// T095 / T017 — 30-line discipline (constitution V; FR-010).
+//
+// Covers BOTH live/promoted templates (templates/) AND ingested drafts
+// (catalog/ingested/). Flagging oversized drafts pre-promotion is the whole
+// point of FR-010: a complex component surfaces as "needs decomposition" here
+// rather than being promoted into the catalog as an oversized primitive.
 function runDisciplineReport(workspaceRoot: string): DoctorIssue[] {
   const out: DoctorIssue[] = [];
-  const templatesDir = join(workspaceRoot, "templates");
-  if (!existsSync(templatesDir)) return out;
-  for (const entry of readdirSync(templatesDir)) {
-    if (!entry.endsWith(".hbs")) continue;
-    const lines = readFileSync(join(templatesDir, entry), "utf8").split("\n").length;
-    if (lines > 30) {
-      out.push({
-        report: "discipline-30-line",
-        severity: "warn",
-        message: `${entry}: ${lines} lines (exceeds 30-line discipline)`,
-      });
-    }
-  }
+  scanTemplateDiscipline(join(workspaceRoot, "templates"), "", out);
+  scanTemplateDiscipline(
+    join(workspaceRoot, "catalog", "ingested"),
+    " (ingested draft — decompose before promote)",
+    out,
+  );
   if (out.length === 0) {
     out.push({
       report: "discipline-30-line",
@@ -223,6 +221,25 @@ function runDisciplineReport(workspaceRoot: string): DoctorIssue[] {
     });
   }
   return out;
+}
+
+function scanTemplateDiscipline(
+  dir: string,
+  label: string,
+  out: DoctorIssue[],
+): void {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir)) {
+    if (!entry.endsWith(".hbs")) continue;
+    const lines = readFileSync(join(dir, entry), "utf8").split("\n").length;
+    if (lines > 30) {
+      out.push({
+        report: "discipline-30-line",
+        severity: "warn",
+        message: `${entry}${label}: ${lines} lines (exceeds 30-line discipline)`,
+      });
+    }
+  }
 }
 
 // T097 — stale lockfile cleanup

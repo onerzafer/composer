@@ -12,10 +12,11 @@ import { basename, relative } from "node:path";
 import ts from "typescript";
 
 import {
+  defineIngester,
   typescriptBackend,
   type CandidateDraft,
-  type IngesterContext,
-  type IngesterPlugin,
+  type ParsedSource,
+  type TsParsedSource,
 } from "@composer/ingest-kit";
 
 interface FieldInfo {
@@ -29,11 +30,16 @@ interface ComponentInfo {
   propsType: ts.Type;
 }
 
-export const reactIngester: IngesterPlugin = {
+// Authored via the `defineIngester` SDK (003 US2 / T013): the codec is the
+// type-aware TS backend + an `extract` step that derives a draft from a
+// component's prop types. `defineIngester` synthesizes the `ingest()` the CLI
+// calls (parse → extract), so the plugin stays a pure declaration.
+export const reactIngester = defineIngester({
   name: "react",
-  async ingest(sourcePath: string, _ctx: IngesterContext): Promise<CandidateDraft[]> {
-    const parsed = typescriptBackend.parse(sourcePath);
+  backend: typescriptBackend,
+  extract(parsed: ParsedSource<TsParsedSource>): CandidateDraft[] {
     const { checker, sourceFile } = parsed.tree;
+    const sourcePath = parsed.path;
 
     const component = findExportedReactComponent(sourceFile, checker);
     if (!component) {
@@ -67,7 +73,7 @@ export const reactIngester: IngesterPlugin = {
 
     return [draft];
   },
-};
+});
 
 export default reactIngester;
 
