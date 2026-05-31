@@ -70,7 +70,7 @@ description: "Task list for 003-ingest-promote"
 - [X] T017 [P] Extend `composer doctor`'s 30-line report to cover ingested/promoted templates (FR-010).
 - [X] T018 [P] Assert the gate mechanically: a test confirming there is NO MCP `ingest`/`promote` tool and the agent surface is unchanged (FR-004/SC-004).
 - [X] T019 [P] Docs: an "Ingesting existing code" section (README/docs) covering ingest→review→promote and authoring an ingester via the SDK.
-- [ ] T020 [P] Make `composer promote` run the quality gate as a **blocking precondition** — refuse a draft failing the available checks (bijection round-trip, 30-line, structural validity) unless `--force` (records the overridden findings). Shared gate driven by `004` FR-007/SC-002; `004` enriches the check set (metadata-completeness + total-functional).
+- [X] T020 [P] Make `composer promote` run the quality gate as a **blocking precondition** — refuse a draft failing the available checks (bijection round-trip, 30-line, structural validity) unless `--force` (records the overridden findings). Shared gate driven by `004` FR-007/SC-002; `004` enriches the check set (metadata-completeness + total-functional). *(Implemented in the 004 session: `promote` runs `gradeDraft` — blocking 30-line/total-functional/metadata, advisory coherence, CI-deferred bijection — and refuses unless `--force`, recording findings in `qualityOverride`.)*
 - [X] T021 Full gate: `pnpm -r build && pnpm test`; confirm 0 regressions.
 
 ---
