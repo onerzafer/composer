@@ -25,15 +25,18 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
+import { gradeDraft } from "@composer/grammar-kit";
+
 export interface PromoteOptions {
   /** Project root containing `composer.json`. */
   projectRoot: string;
   /** The draft name as it appears on disk (e.g. `"Card"`). */
   draftName: string;
   /**
-   * Reserved for the 004 FR-007 blocking quality precondition — when wired
-   * up, `force: true` will be the way to promote a draft that fails the
-   * quality gate (the override is logged). Unused in this v0 cut.
+   * Override the 004 FR-007 blocking quality precondition. A draft that fails
+   * a blocking quality check (30-line, total-functional, metadata) is refused
+   * unless `force: true`, which promotes anyway and records the overridden
+   * findings in `PromoteResult.qualityOverride`.
    */
   force?: boolean;
 }
@@ -46,6 +49,8 @@ export interface PromoteResult {
   templateTarget: string;
   /** Wall-clock duration of the move. */
   elapsedMs: number;
+  /** Quality-gate findings that were overridden via `force` (absent when the gate passed). */
+  qualityOverride?: string[];
 }
 
 export class PromoteError extends Error {
@@ -158,6 +163,24 @@ export async function promote(options: PromoteOptions): Promise<PromoteResult> {
     );
   }
 
+  // Quality precondition (004 FR-007 / T018) — the SHARED gate, so it applies to
+  // both grammar-authored and ingested drafts. A draft failing a blocking check
+  // (30-line / total-functional / metadata) is refused unless `force`, which
+  // promotes anyway and records the overridden findings. Runs AFTER the
+  // collision check (a collision is a hard refusal `force` does not override).
+  const quality = gradeDraft({ stagingDir: ingestedDir, draftName: options.draftName });
+  let qualityOverride: string[] | undefined;
+  if (!quality.ok) {
+    if (!options.force) {
+      throw new PromoteError(
+        `promote: ${options.draftName} fails the quality gate (${quality.failing.join(", ")}). ` +
+          `Fix the draft and re-run, or pass --force to override (the findings are recorded).`,
+        8,
+      );
+    }
+    qualityOverride = quality.failing;
+  }
+
   // Ensure target dirs and move atomically (rename is atomic on the same fs).
   mkdirSync(dirname(schemaTarget), { recursive: true });
   mkdirSync(dirname(templateTarget), { recursive: true });
@@ -169,5 +192,6 @@ export async function promote(options: PromoteOptions): Promise<PromoteResult> {
     schemaTarget,
     templateTarget,
     elapsedMs: Date.now() - start,
+    ...(qualityOverride ? { qualityOverride } : {}),
   };
 }

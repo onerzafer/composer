@@ -68,3 +68,14 @@ export {
   type DoctorIssue,
   type Severity,
 } from "./commands/doctor.js";
+
+export {
+  runGrammar,
+  grammarCheck,
+  grammarPaths,
+  formatQualityReport,
+  GrammarCliError,
+  type GrammarCheckOptions,
+  type GrammarPaths,
+  type GrammarRouteResult,
+} from "./commands/grammar.js";

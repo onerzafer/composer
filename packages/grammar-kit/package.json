@@ -1,22 +1,25 @@
 {
-  "name": "@composer/cli",
+  "name": "@composer/grammar-kit",
   "version": "0.1.0-alpha.0",
-  "description": "Composer CLI — composer init / compose / validate / explain / trace / doctor",
+  "description": "Guided, human-owned vocabulary authoring for Composer — AI skills + deterministic staging/quality helpers (the forward complement of ingest-kit).",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": {
-    "composer": "./dist/bin.js"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
-    }
+    },
+    "./manifest.json": "./manifest.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "skills",
+    "templates",
+    "taxonomy",
+    "scripts",
+    "manifest.json"
   ],
   "publishConfig": {
     "access": "public"
@@ -28,9 +31,7 @@
   "dependencies": {
     "@composer/adapter-kit": "workspace:*",
     "@composer/core": "workspace:*",
-    "commander": "^12.1.0",
-    "@composer/ingest-kit": "workspace:*",
-    "@composer/grammar-kit": "workspace:*"
+    "@composer/ingest-kit": "workspace:*"
   },
   "engines": {
     "node": ">=20"

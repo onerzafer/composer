@@ -17,6 +17,7 @@
     "@composer/typescript": "workspace:*",
     "zod": "^3.23.0",
     "@composer/ingest-kit": "workspace:*",
-    "@composer/ingest-react": "workspace:*"
+    "@composer/ingest-react": "workspace:*",
+    "@composer/grammar-kit": "workspace:*"
   }
 }

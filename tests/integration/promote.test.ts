@@ -74,9 +74,13 @@ describe("composer promote (003 US1 / FR-002 + FR-007)", () => {
       writeFileSync(templateDraft, `<Card />\n`, "utf8");
 
       const { promote } = await import("@composer/cli");
+      // This minimal draft tests the MOVE mechanics, not quality — it has no
+      // real metadata, so the 004 quality precondition (now on the shared gate)
+      // would refuse it. `force` overrides the gate to exercise the move alone.
       const result = await promote({
         projectRoot: ws.projectRoot,
         draftName: "Card",
+        force: true,
       });
       expect(result.ok).toBe(true);
 

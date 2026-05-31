@@ -1,0 +1,31 @@
+{
+  "name": "@composer/grammar-kit",
+  "version": "0.1.0-alpha.0",
+  "kind": "composer-authoring-skill-pack",
+  "description": "Guided, human-owned vocabulary authoring for Composer. Installs authoring-time AI skills into a project's agent; the deterministic gate + quality checks run via the `composer` CLI. Adds NO tool to Composer's MCP/agent runtime surface (constitution IV).",
+  "skills": [
+    { "name": "grammar.specify", "source": "skills/grammar.specify.md", "install": ".claude/skills/grammar-specify/SKILL.md" },
+    { "name": "grammar.clarify", "source": "skills/grammar.clarify.md", "install": ".claude/skills/grammar-clarify/SKILL.md" },
+    { "name": "grammar.plan", "source": "skills/grammar.plan.md", "install": ".claude/skills/grammar-plan/SKILL.md" },
+    { "name": "grammar.tasks", "source": "skills/grammar.tasks.md", "install": ".claude/skills/grammar-tasks/SKILL.md" },
+    { "name": "grammar.author", "source": "skills/grammar.author.md", "install": ".claude/skills/grammar-author/SKILL.md" },
+    { "name": "grammar.checklist", "source": "skills/grammar.checklist.md", "install": ".claude/skills/grammar-checklist/SKILL.md" }
+  ],
+  "assets": [
+    { "source": "templates/vocabulary-brief.md", "install": ".specify/grammar/templates/vocabulary-brief.md" },
+    { "source": "templates/catalog-design.md", "install": ".specify/grammar/templates/catalog-design.md" },
+    { "source": "taxonomy/clarify-taxonomy.md", "install": ".specify/grammar/taxonomy/clarify-taxonomy.md" },
+    { "source": "scripts/bash/grammar-paths.sh", "install": ".specify/grammar/scripts/grammar-paths.sh", "mode": "0755" }
+  ],
+  "cli": {
+    "check": "composer grammar check <draft>",
+    "paths": "composer grammar paths",
+    "activate": "composer promote <draft>"
+  },
+  "invariants": [
+    "Nothing in grammar.* activates a primitive; only `composer promote` (human) changes the live catalog.",
+    "Drafts in staging never affect discover/scaffold/compose.",
+    "No control-flow primitive and no >30-line template can be promoted without an explicit --force override.",
+    "The composer MCP/agent tool set is unchanged by this feature."
+  ]
+}

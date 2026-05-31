@@ -28,6 +28,9 @@ import {
   PromoteError,
   ingestCommand,
   IngestCliError,
+  runGrammar,
+  formatQualityReport,
+  GrammarCliError,
 } from "./index.js";
 
 const program = new Command();
@@ -190,8 +193,8 @@ program
 
 program
   .command("promote <draft>")
-  .description("Move a quarantined draft into the live catalog (the human gate)")
-  .option("--force", "Reserved for 004 quality-precondition override; ignored in v0.1")
+  .description("Move a staged draft into the live catalog (the human gate)")
+  .option("--force", "Override the quality gate: promote a draft that fails a blocking check (findings are recorded)")
   .option("--json", "Machine-readable output")
   .action(async (draft: string, opts: { force?: boolean; json?: boolean }) => {
     try {
@@ -208,6 +211,35 @@ program
             `  schema:   ${result.schemaTarget}\n` +
             `  template: ${result.templateTarget}\n`,
         );
+      }
+    } catch (err) {
+      handleError(err, opts.json);
+    }
+  });
+
+program
+  .command("grammar <phase> [arg]")
+  .description("Guided vocabulary authoring (004): `grammar check <draft>` quality report, `grammar paths`, or a pointer to the grammar.<phase> AI skill")
+  .option("--json", "Machine-readable output")
+  .action((phase: string, arg: string | undefined, opts: { json?: boolean }) => {
+    try {
+      const result = runGrammar({ projectRoot: process.cwd(), phase, arg });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else if (result.kind === "check") {
+        process.stdout.write(formatQualityReport(result.report!));
+      } else if (result.kind === "paths") {
+        process.stdout.write(
+          Object.entries(result.paths!)
+            .map(([k, v]) => `${k}=${v}`)
+            .join("\n") + "\n",
+        );
+      } else {
+        process.stdout.write((result.message ?? "") + "\n");
+      }
+      // `grammar check` exit code mirrors the report: non-zero if a blocking check fails.
+      if (result.kind === "check" && result.report && !result.report.ok) {
+        process.exit(1);
       }
     } catch (err) {
       handleError(err, opts.json);
@@ -236,6 +268,7 @@ function handleError(err: unknown, asJson: boolean | undefined): never {
     err instanceof ValidateCliError ||
     err instanceof PromoteError ||
     err instanceof IngestCliError ||
+    err instanceof GrammarCliError ||
     err instanceof ReservedNotImplementedError
   ) {
     if (asJson) {
