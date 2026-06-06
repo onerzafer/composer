@@ -13,10 +13,10 @@ resolveLimits(projectRoot: string, env = process.env): EffectiveLimits
 | L1 | no `limits` in `composer.json`, no env | returns defaults `{ maxComposeDurationMs: 30000, maxHoldMs: 60000 }` |
 | L2 | `composer.json.limits.maxHoldMs = 90000` | overrides that field; other field defaulted |
 | L3 | env `COMPOSER_LOCK_MAX_HOLD_MS=120000` set | env wins over `composer.json` for that field |
-| L4 | resolved `maxHoldMs < maxComposeDurationMs + marginMs` | throws `ComposerConfigError` naming both values + any active env override |
+| L4 | resolved `maxHoldMs < maxComposeDurationMs + ttlMarginMs` | throws `ComposerConfigError` naming both values + any active env override |
 | L5 | a tunable is non-integer / ≤ 0 (config or env) | throws `ComposerConfigError` |
 
-`marginMs = floor(maxComposeDurationMs / 2)` by default.
+`ttlMarginMs = floor(maxComposeDurationMs / 2)` by default.
 
 ## 2. Bounded compose (`core/src/pipeline/orchestrator.ts`)
 
@@ -26,8 +26,9 @@ resolveLimits(projectRoot: string, env = process.env): EffectiveLimits
 | O2 | pipeline body exceeds `maxComposeDurationMs` (await-stall) | compose | rejects with `ComposeTimeoutError` (`code:"COMPOSE_TIMEOUT"`); lock **already released** before reject (FR-008) |
 | O3 | budget expires, stuck `await` later resolves | — | pre-`commit` `throwIfAborted()` fires → **nothing committed**; tree byte-identical (Constitution III) |
 | O4 | compose throws a normal pipeline error before budget | compose | existing typed error (structural/semantic/audit/render/drift); lock released; timer cleared |
+| O5 | budget would expire *during* `commit` | compose | timer already disarmed before `commit` → commit completes normally and returns **success**; no `ComposeTimeoutError` for an actually-committed compose (Atomic Compose, analyze U1) |
 
-Normative: arm `setTimeout(...).unref()`, `clearTimeout` in `finally`, `Promise.race([runPipeline(signal), abortPromise])`, `signal.throwIfAborted()` at each phase boundary and mandatorily immediately before `commit`.
+Normative: arm `setTimeout(...).unref()`, `clearTimeout` in `finally`, `Promise.race([runPipeline(signal), abortPromise])`, `signal.throwIfAborted()` at each phase boundary and mandatorily immediately before `commit` — **then disarm the timer (`clearTimeout`) and detach the race immediately before `commit` so a timeout cannot interleave with the atomic commit (commit is a bounded, uninterruptible critical section).**
 
 ## 3. `doctor` stale-lock report (`cli/src/commands/doctor.ts`)
 

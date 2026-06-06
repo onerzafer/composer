@@ -15,7 +15,7 @@ A hung `compose` holds the whole-workspace lock forever: the lock is released on
 The fix makes the lock **self-heal** with three complementary mechanisms, all inside Composer (no consumer change, no new MCP tool):
 
 1. **Age-based reclaim** — `WorkspaceLock.acquire()` reclaims a lock whose `started_at` is older than a configurable max-hold TTL, *even if the PID is alive*. A genuinely in-progress compose (alive PID, within TTL) still fails fast with `LockHeldError`. This is the **hard guarantee**: recovery happens even when the holder's event loop is wedged.
-2. **Bounded compose** — `orchestrateCompose` runs the pipeline under a wall-clock budget via `AbortController` + `Promise.race`. On budget exceed it aborts, releases the lock, and throws a typed `ComposeTimeoutError`. Abort checkpoints before the mutating phases preserve Atomic Compose even if a stuck `await` later resolves. This bounds the **common** case in-process so the workspace isn't blocked for a whole TTL each time.
+2. **Bounded compose** — `orchestrateCompose` runs the pipeline under a wall-clock budget via `AbortController` + `Promise.race`. On budget exceed it aborts, releases the lock, and throws a typed `ComposeTimeoutError`. Abort checkpoints before the mutating phases — plus disarming the budget timer immediately before `commit` — preserve Atomic Compose even if a stuck `await` later resolves, and ensure a timeout never interleaves with the atomic write. This bounds the **common** case in-process so the workspace isn't blocked for a whole TTL each time.
 3. **Ownership-checked release** — `release()` only deletes a lock file whose `(pid, started_at)` still matches what this instance wrote, so a slow holder that finishes after being reclaimed cannot delete the *new* holder's lock.
 
 Acquire is upgraded to an **atomic** `O_EXCL` create with a bounded reclaim-retry loop so a reclaim race produces exactly one winner; the losers see `LockHeldError` against the *new* lock. The TTL and duration budget are configurable (optional `limits` block in `composer.json`, env-var override) with documented defaults. `doctor` is extended to report an age-exceeded live-PID lock as reclaimable; `doctor --fix` and `compose --force` give operators a supported force-break.
@@ -48,7 +48,7 @@ Acquire is upgraded to an **atomic** `O_EXCL` create with a bounded reclaim-retr
 |-----------|--------|---------|
 | I. Schema-Compiled Composition | No change to authoring/compile model. | ✅ N/A |
 | II. Three Surfaces, One Owner | No catalog/composition/compiler surface change. `--force`/`--fix` live on the **CLI (humans)**. | ✅ Pass |
-| III. Atomic Compose | A timeout must not leave half-written state. Abort is checked at phase boundaries and **immediately before `commit`** (the only mutating phase), so an aborted compose never commits even if its stuck `await` later resolves. | ✅ Pass (load-bearing — see research R4) |
+| III. Atomic Compose | A timeout must not leave half-written state. Abort is checked at phase boundaries and **immediately before `commit`** (the only mutating phase); the **budget timer is disarmed before `commit`** so a timeout can never interleave with the atomic write. An aborted compose never commits even if its stuck `await` later resolves. | ✅ Pass (load-bearing — see research R4) |
 | IV. No Escape Hatches on Agent Surface | **No new MCP tool.** MCP change is limited to: bounded compose returns a typed timeout error with the lock already released. Force-break is CLI-only. | ✅ Pass |
 | V. 30-Line Discipline | No templates/prep touched. | ✅ N/A |
 | VI. Drift Detection | Unchanged; drift-check still runs before commit. | ✅ N/A |
@@ -117,7 +117,7 @@ tests/
 docs/                            # CHANGE: document default budgets/TTL + force-break one-liner
 ```
 
-**Structure Decision**: Single monorepo, existing package boundaries. The fix is concentrated in `@composer/core` (lock + orchestrator + config), with thin surface changes in `@composer/cli` (operator tools) and `@composer/mcp` (error typing only). A new tiny `core/src/config/limits.ts` centralizes default/override resolution so both `acquire()` (TTL) and `orchestrateCompose` (budget) read one source of truth — and FR-002's invariant (`maxHold > maxDuration + margin`) is asserted in exactly one place.
+**Structure Decision**: Single monorepo, existing package boundaries. The fix is concentrated in `@composer/core` (lock + orchestrator + config), with thin surface changes in `@composer/cli` (operator tools) and `@composer/mcp` (error typing only). A new tiny `core/src/config/limits.ts` centralizes default/override resolution so both `acquire()` (TTL) and `orchestrateCompose` (budget) read one source of truth — and FR-002's invariant (`maxHold ≥ maxDuration + ttlMarginMs`) is asserted in exactly one place.
 
 ## Phase 0 — Research
 
@@ -126,9 +126,9 @@ See [research.md](./research.md). Decisions resolved:
 - **R1** Reclaim trigger: `started_at` age vs max-hold TTL, applied even to live PIDs; dead-PID/unparseable reclaim preserved.
 - **R2** Atomic acquire: `openSync(path, "wx")` (O_EXCL) + bounded reclaim-retry loop → exactly-one-winner under a reclaim race (closes the TOCTOU edge case).
 - **R3** Bounded compose: `AbortController` + `Promise.race` around `runPipeline`; effective whenever the event loop still turns. Age-based reclaim is the backstop when it does not.
-- **R4** Atomicity under abort: `signal.throwIfAborted()` at phase boundaries, **mandatory immediately before `commit`** — guarantees no half-written state even if a stuck `await` resolves post-timeout.
+- **R4** Atomicity under abort: `signal.throwIfAborted()` at phase boundaries, **mandatory immediately before `commit`**, then the budget timer is **disarmed before `commit`** so a timeout never interleaves with the atomic write — guarantees no half-written state (and no timeout returned for an actually-committed compose) even if a stuck `await` resolves post-timeout.
 - **R5** Ownership identity = `(pid, started_at)`; `release()` verifies before unlink.
-- **R6** Defaults & config surface: `maxComposeDurationMs` and `maxHoldMs` with `maxHold > maxDuration + margin`; defaults documented; `composer.json` `limits` block + env override.
+- **R6** Defaults & config surface: `maxComposeDurationMs` and `maxHoldMs` with `maxHold ≥ maxDuration + ttlMarginMs`; defaults documented; `composer.json` `limits` block + env override.
 - **R7** Clock skew: clamp age to `≥ 0`; a just-written lock is never stale.
 
 ## Phase 1 — Design & Contracts

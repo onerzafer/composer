@@ -13,7 +13,7 @@ Entities and their evolution. No database — state is one JSON lock file plus c
 | `started_at` | `string` (ISO 8601) | existing → **load-bearing** | Now read for age-based staleness (R1) and as half of the ownership identity (R5). |
 | `surface` | `"mcp" \| "cli"` | existing | Reported by `doctor`. |
 | `spec_id` | `string` | existing | Reported by `doctor`. |
-| `expires_at` | `string` (ISO 8601) | **optional, new** | Convenience = `started_at + maxHoldMs` at write time. Advisory only; the authoritative check recomputes age from `started_at` against the *reader's* effective `maxHoldMs` (so a config change takes effect without rewriting live locks). May be added for human/`doctor` readability; not required for correctness. |
+| `expires_at` | `string` (ISO 8601) | **deferred — not in 005** | Advisory convenience (`started_at + maxHoldMs`) for human/`doctor` readability. **No 005 task writes or reads it** — the authoritative staleness check always recomputes age from `started_at` against the *reader's* effective `maxHoldMs` (so a config change takes effect without rewriting live locks). Recorded here only to mark the deferral; revisit if `doctor` output later needs a precomputed expiry. |
 
 **Validation (`tryRead`)** unchanged in spirit: a record is valid iff `pid:number`, `started_at:string`, `surface ∈ {mcp,cli}`. Invalid/unparseable → reclaimable (preserved).
 
@@ -37,9 +37,9 @@ isReclaimable(existing, now, maxHoldMs):
 |-------|------|---------|------------|
 | `maxComposeDurationMs` | `number` (int > 0) | `30_000` | wall-clock budget for the whole pipeline (R3) |
 | `maxHoldMs` | `number` (int > 0) | `60_000` | lock TTL for age-based reclaim (R1) |
-| `marginMs` | `number` (int ≥ 0) | `maxComposeDurationMs / 2` | derived; enforces the gap |
+| `ttlMarginMs` | `number` (int ≥ 0) | `maxComposeDurationMs / 2` | derived; the **TTL safety margin** (FR-002 gap between budget and TTL). Distinct from SC-003's *timeout-detection margin* (≤ 5 s). |
 
-**Invariant (asserted at resolve time)**: `maxHoldMs ≥ maxComposeDurationMs + marginMs`. Violation → `ComposerConfigError` before any compose runs (fail fast).
+**Invariant (asserted at resolve time)**: `maxHoldMs ≥ maxComposeDurationMs + ttlMarginMs`. Violation → `ComposerConfigError` before any compose runs (fail fast).
 
 **Resolution precedence** (first present wins, per field):
 1. env: `COMPOSER_COMPOSE_MAX_DURATION_MS`, `COMPOSER_LOCK_MAX_HOLD_MS`
