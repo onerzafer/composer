@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-`specs/004-grammar-kit/plan.md` (active feature)
+`specs/005-fix-compose-lock-leak/plan.md` (active feature)
 
 Base architecture plan: `specs/001-composer-toolkit-v0/plan.md`
 
