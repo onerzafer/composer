@@ -7,10 +7,17 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+/** Optional compose/lock tunables (005). See core/src/config/limits.ts for resolution + defaults. */
+export interface ComposerLimits {
+  maxComposeDurationMs?: number;
+  maxHoldMs?: number;
+}
+
 export interface ComposerConfig {
   workspace: string;
   engine: string;
   extends?: string | null;
+  limits?: ComposerLimits;
   $schema?: string;
 }
 
@@ -18,7 +25,8 @@ const WORKSPACE_PATTERN = /^\.\/[^/].*$|^[^/].*$/;
 const ENGINE_PATTERN = /^@composer\/typescript@\d+$/;
 const EXTENDS_PATTERN = /^(@[a-z0-9][a-z0-9-]*\/)?[a-z0-9][a-z0-9-]*@\d+$/;
 
-const ALLOWED_KEYS = new Set(["workspace", "engine", "extends", "$schema"]);
+const ALLOWED_KEYS = new Set(["workspace", "engine", "extends", "limits", "$schema"]);
+const ALLOWED_LIMIT_KEYS = new Set(["maxComposeDurationMs", "maxHoldMs"]);
 
 export interface ValidationIssue {
   field: string;
@@ -78,6 +86,26 @@ export function validateComposerConfig(value: unknown): ComposerConfig {
     }
   }
 
+  if (v["limits"] !== undefined) {
+    const lim = v["limits"];
+    if (lim === null || typeof lim !== "object" || Array.isArray(lim)) {
+      issues.push({ field: "limits", message: "must be an object if present" });
+    } else {
+      const limObj = lim as Record<string, unknown>;
+      for (const key of Object.keys(limObj)) {
+        if (!ALLOWED_LIMIT_KEYS.has(key)) {
+          issues.push({ field: `limits.${key}`, message: `unknown property "${key}"` });
+        }
+      }
+      for (const key of ALLOWED_LIMIT_KEYS) {
+        const val = limObj[key];
+        if (val !== undefined && (typeof val !== "number" || !Number.isInteger(val) || val <= 0)) {
+          issues.push({ field: `limits.${key}`, message: "must be a positive integer" });
+        }
+      }
+    }
+  }
+
   if (v["$schema"] !== undefined && typeof v["$schema"] !== "string") {
     issues.push({ field: "$schema", message: "must be a string if present" });
   }
@@ -90,10 +118,26 @@ export function validateComposerConfig(value: unknown): ComposerConfig {
     );
   }
 
+  let limits: ComposerLimits | undefined;
+  const rawLimits = v["limits"];
+  if (
+    rawLimits !== undefined &&
+    rawLimits !== null &&
+    typeof rawLimits === "object" &&
+    !Array.isArray(rawLimits)
+  ) {
+    const lo = rawLimits as Record<string, unknown>;
+    limits = {};
+    if (typeof lo["maxComposeDurationMs"] === "number")
+      limits.maxComposeDurationMs = lo["maxComposeDurationMs"];
+    if (typeof lo["maxHoldMs"] === "number") limits.maxHoldMs = lo["maxHoldMs"];
+  }
+
   return {
     workspace: v["workspace"] as string,
     engine: v["engine"] as string,
     extends: (v["extends"] as string | null | undefined) ?? null,
+    ...(limits ? { limits } : {}),
     ...(typeof v["$schema"] === "string" ? { $schema: v["$schema"] } : {}),
   };
 }

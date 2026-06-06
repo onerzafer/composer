@@ -10,7 +10,7 @@ resolveLimits(projectRoot: string, env = process.env): EffectiveLimits
 
 | # | Given | Then |
 |---|-------|------|
-| L1 | no `limits` in `composer.json`, no env | returns defaults `{ maxComposeDurationMs: 30000, maxHoldMs: 60000 }` |
+| L1 | no `limits` in `composer.json`, no env | returns defaults `{ maxComposeDurationMs: 120000, maxHoldMs: 180000 }` |
 | L2 | `composer.json.limits.maxHoldMs = 90000` | overrides that field; other field defaulted |
 | L3 | env `COMPOSER_LOCK_MAX_HOLD_MS=120000` set | env wins over `composer.json` for that field |
 | L4 | resolved `maxHoldMs < maxComposeDurationMs + ttlMarginMs` | throws `ComposerConfigError` naming both values + any active env override |

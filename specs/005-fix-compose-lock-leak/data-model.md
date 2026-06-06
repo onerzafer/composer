@@ -35,8 +35,8 @@ isReclaimable(existing, now, maxHoldMs):
 
 | Field | Type | Default | Constraint |
 |-------|------|---------|------------|
-| `maxComposeDurationMs` | `number` (int > 0) | `30_000` | wall-clock budget for the whole pipeline (R3) |
-| `maxHoldMs` | `number` (int > 0) | `60_000` | lock TTL for age-based reclaim (R1) |
+| `maxComposeDurationMs` | `number` (int > 0) | `120_000` | wall-clock budget for the whole pipeline (R3); generous so a cold compile is never killed |
+| `maxHoldMs` | `number` (int > 0) | `180_000` | lock TTL for age-based reclaim (R1) |
 | `ttlMarginMs` | `number` (int ≥ 0) | `maxComposeDurationMs / 2` | derived; the **TTL safety margin** (FR-002 gap between budget and TTL). Distinct from SC-003's *timeout-detection margin* (≤ 5 s). |
 
 **Invariant (asserted at resolve time)**: `maxHoldMs ≥ maxComposeDurationMs + ttlMarginMs`. Violation → `ComposerConfigError` before any compose runs (fail fast).
@@ -57,8 +57,8 @@ Add one optional key to the existing strict validator (`ALLOWED_KEYS`, `validate
   "workspace": "./design",
   "engine": "@composer/typescript@1",
   "limits": {                      // NEW — optional
-    "maxComposeDurationMs": 30000, // int > 0, optional
-    "maxHoldMs": 60000             // int > 0, optional
+    "maxComposeDurationMs": 120000, // int > 0, optional
+    "maxHoldMs": 180000             // int > 0, optional
   }
 }
 ```

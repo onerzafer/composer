@@ -17,6 +17,8 @@ import {
   loadHashStore,
   resolveAndCacheParent,
   resolveWorkspace,
+  resolveLimits,
+  DEFAULT_LIMITS,
   hashFile,
 } from "@composer/core";
 
@@ -47,6 +49,8 @@ export interface DoctorOptions {
   projectRoot: string;
   refreshParent?: boolean;
   strict?: boolean;
+  /** Remove reclaimable locks (dead-PID, unparseable, or age-stale live-PID) — FR-010. */
+  fix?: boolean;
 }
 
 export function doctor(options: DoctorOptions): DoctorReport {
@@ -54,9 +58,15 @@ export function doctor(options: DoctorOptions): DoctorReport {
 
   // T092 — workspace status
   let workspaceRoot: string | null = null;
+  let maxHoldMs = DEFAULT_LIMITS.maxHoldMs;
   try {
     const ws = resolveWorkspace(options.projectRoot);
     workspaceRoot = ws.workspaceRoot;
+    try {
+      maxHoldMs = resolveLimits(ws.config).maxHoldMs;
+    } catch {
+      /* invalid limits config — fall back to the default TTL for the report */
+    }
     issues.push({
       report: "workspace-status",
       severity: "info",
@@ -84,7 +94,7 @@ export function doctor(options: DoctorOptions): DoctorReport {
     issues.push(...runDisciplineReport(workspaceRoot));
 
     // T097 — stale lockfile
-    issues.push(...runStaleLockReport(workspaceRoot));
+    issues.push(...runStaleLockReport(workspaceRoot, maxHoldMs, options.fix ?? false));
 
     // T098 — naming hygiene
     issues.push(...runNamingHygieneReport(workspaceRoot));
@@ -242,21 +252,29 @@ function scanTemplateDiscipline(
   }
 }
 
-// T097 — stale lockfile cleanup
-function runStaleLockReport(workspaceRoot: string): DoctorIssue[] {
+// T097 (001) + 005 T024/T025 — stale lockfile report.
+// Reports an age-exceeded live-PID lock as reclaimable (FR-009) with pid/age/surface/spec_id.
+// Dead-PID and unparseable locks are auto-removed (preserved). `--fix` additionally
+// removes an age-stale live-PID lock (FR-010). A within-TTL live lock is left untouched.
+function runStaleLockReport(
+  workspaceRoot: string,
+  maxHoldMs: number,
+  fix: boolean,
+): DoctorIssue[] {
   const lockPath = join(workspaceRoot, ".composer", "cache", "compose.lock");
   if (!existsSync(lockPath)) {
-    return [
-      { report: "stale-lock", severity: "info", message: "no lockfile present" },
-    ];
+    return [{ report: "stale-lock", severity: "info", message: "no lockfile present" }];
   }
-  let pid: number | null = null;
+
+  let parsed: { pid?: number; started_at?: string; surface?: string; spec_id?: string } | null =
+    null;
   try {
-    const raw = JSON.parse(readFileSync(lockPath, "utf8")) as { pid?: number };
-    if (typeof raw.pid === "number") pid = raw.pid;
+    parsed = JSON.parse(readFileSync(lockPath, "utf8"));
   } catch {
-    /* fall through */
+    parsed = null;
   }
+
+  const pid = typeof parsed?.pid === "number" ? parsed.pid : null;
   if (pid === null) {
     rmSync(lockPath, { force: true });
     return [
@@ -277,11 +295,40 @@ function runStaleLockReport(workspaceRoot: string): DoctorIssue[] {
       },
     ];
   }
+
+  // Live PID — distinguish a genuine in-progress compose from an age-stale (wedged) holder.
+  const startedMs = parsed?.started_at ? Date.parse(parsed.started_at) : Number.NaN;
+  const ageMs = Number.isNaN(startedMs) ? Number.POSITIVE_INFINITY : Math.max(0, Date.now() - startedMs);
+  const ageS = Number.isFinite(ageMs) ? Math.round(ageMs / 1000) : "unknown";
+  const ttlS = Math.round(maxHoldMs / 1000);
+  const surface = parsed?.surface ?? "unknown";
+  const specId = parsed?.spec_id ?? "unknown";
+
+  if (ageMs > maxHoldMs) {
+    if (fix) {
+      rmSync(lockPath, { force: true });
+      return [
+        {
+          report: "stale-lock",
+          severity: "warn",
+          message: `reclaimable stale lock removed (--fix): pid ${pid}, age ${ageS}s > TTL ${ttlS}s, surface ${surface}, spec ${specId}`,
+        },
+      ];
+    }
+    return [
+      {
+        report: "stale-lock",
+        severity: "warn",
+        message: `reclaimable stale lock (alive but age-exceeded): pid ${pid}, age ${ageS}s > TTL ${ttlS}s, surface ${surface}, spec ${specId} — run 'composer doctor --fix' or 'composer compose <id> --force'`,
+      },
+    ];
+  }
+
   return [
     {
       report: "stale-lock",
       severity: "info",
-      message: `live lockfile (PID ${pid}) at ${lockPath}`,
+      message: `live lockfile (pid ${pid}, age ${ageS}s, surface ${surface}, spec ${specId}) at ${lockPath}`,
     },
   ];
 }

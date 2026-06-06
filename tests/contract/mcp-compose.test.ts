@@ -163,4 +163,47 @@ describe("MCP composer.compose — atomic write (FR-003)", () => {
       }),
     ).rejects.toThrow(/DRIFT_DETECTED|drift|hand-edited/i);
   });
+
+  it("on timeout returns COMPOSE_TIMEOUT and releases the lock — retry is not LOCK_HELD (FR-008/M2)", async () => {
+    const { compose, ComposeTimeoutError } = await import("@composer/core");
+    // Catalog that hangs module evaluation past the budget (unref'd timer).
+    const hangingCatalog =
+      `import { z } from "zod";\n` +
+      `await new Promise((r) => { const t = setTimeout(r, 60000); if (t && typeof t.unref === "function") t.unref(); });\n` +
+      `export const Hero = z.object({ primitive: z.literal("Hero"), id: z.string(), title: z.string().min(1) }).strict();\n` +
+      `export const HeroMeta = { primitive: "Hero", version: "1.0.0", intent: "x", whenToUse: "x", whenNotToUse: [], fieldGuidance: {}, examples: [{ primitive: "Hero", id: "d", title: "x" }] };\n` +
+      `export const PrimitiveNode = z.discriminatedUnion("primitive", [Hero]);\n`;
+    const local = makeFixture({
+      composerJson: {
+        workspace: "./design",
+        engine: "@composer/typescript@1",
+        limits: { maxComposeDurationMs: 300, maxHoldMs: 600 },
+      },
+      files: {
+        "catalog/index.ts": hangingCatalog,
+        "templates/hero.ts.hbs": STUB_HERO_TEMPLATE,
+        "output.map.ts": STUB_OUTPUT_MAP,
+      },
+    });
+    try {
+      await expect(
+        compose(local.projectRoot, "a", { primitive: "Hero", id: "a", title: "x" }),
+      ).rejects.toBeInstanceOf(ComposeTimeoutError);
+
+      // Lock released by the timed-out call (FR-008) — no leak.
+      const lockPath = join(local.workspaceRoot, ".composer", "cache", "compose.lock");
+      expect(existsSync(lockPath)).toBe(false);
+
+      // Immediate retry must NOT see LOCK_HELD: it times out again (would be LOCK_HELD if leaked).
+      let retryErr: unknown;
+      try {
+        await compose(local.projectRoot, "b", { primitive: "Hero", id: "b", title: "x" });
+      } catch (e) {
+        retryErr = e;
+      }
+      expect(retryErr).toBeInstanceOf(ComposeTimeoutError);
+    } finally {
+      local.cleanup();
+    }
+  });
 });

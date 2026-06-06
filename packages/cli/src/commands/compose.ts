@@ -4,10 +4,11 @@
 // `<workspace>/specs/<spec_id>.json` and routes through the same engine
 // pipeline. Translates engine errors into the CLI exit-code table.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import {
   AuditFailedError,
+  ComposeTimeoutError,
   DriftDetectedError,
   LockHeldExposedError,
   RenderFailedError,
@@ -33,6 +34,8 @@ export interface ComposeCliOptions {
   projectRoot: string;
   specId: string;
   dryRun?: boolean;
+  /** Force-break an existing lock before composing (last-resort operator escape hatch, FR-010). */
+  force?: boolean;
 }
 
 export async function composeCommand(
@@ -51,6 +54,16 @@ export async function composeCommand(
       `Spec at ${specPath} is not valid JSON: ${(err as Error).message}`,
       1,
     );
+  }
+
+  // Last-resort operator escape hatch (FR-010): force-break a held lock before composing.
+  if (opts.force && !opts.dryRun) {
+    const lockPath = join(ws.workspaceRoot, ".composer", "cache", "compose.lock");
+    try {
+      rmSync(lockPath, { force: true });
+    } catch {
+      /* best-effort */
+    }
   }
 
   try {
@@ -82,6 +95,9 @@ function translateComposeError(err: unknown): ComposeCliError {
   }
   if (err instanceof LockHeldExposedError) {
     return new ComposeCliError(err.message, 7);
+  }
+  if (err instanceof ComposeTimeoutError) {
+    return new ComposeCliError(err.message, 9);
   }
   const m = err instanceof Error ? err.message : String(err);
   if (/path traversal/i.test(m)) return new ComposeCliError(m, 8);

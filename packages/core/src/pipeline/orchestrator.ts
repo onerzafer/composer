@@ -17,6 +17,7 @@ import { resolveAndCacheParent, type ResolvedParent } from "../workspace/extends
 import { assertValidSpecId } from "../workspace/spec-id.js";
 import type { AuditRule } from "@composer/adapter-kit";
 import { WorkspaceLock, LockHeldError } from "../lock/workspace-lock.js";
+import { resolveLimits } from "../config/limits.js";
 import { Logger, buildLogPath } from "../log/logger.js";
 import { structuralValidate, StructuralValidationError } from "./phases/structural.js";
 import { semanticValidate, SemanticValidationError } from "./phases/semantic.js";
@@ -46,6 +47,33 @@ export class LockHeldExposedError extends Error {
     super(`LOCK_HELD: ${lockMessage}`);
     this.name = "LockHeldExposedError";
   }
+}
+
+/** Thrown when a compose exceeds its wall-clock budget (FR-004). The lock is
+ * always released before this propagates (FR-008). */
+export class ComposeTimeoutError extends Error {
+  readonly code = "COMPOSE_TIMEOUT" as const;
+  constructor(
+    public readonly durationMs: number,
+    public readonly specId: string,
+    public readonly surface: "mcp" | "cli",
+  ) {
+    super(
+      `COMPOSE_TIMEOUT: compose for "${specId}" exceeded ${durationMs}ms budget (surface ${surface})`,
+    );
+    this.name = "ComposeTimeoutError";
+  }
+}
+
+/** A promise that rejects with the signal's reason when (or if already) aborted. */
+function rejectOnAbort(signal: AbortSignal): Promise<never> {
+  return new Promise<never>((_, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+  });
 }
 
 export async function orchestrateCompose(opts: ComposeOptions): Promise<ComposeResult> {
@@ -84,8 +112,9 @@ export async function orchestrateCompose(opts: ComposeOptions): Promise<ComposeR
     outcome: "ok",
   });
 
+  const limits = resolveLimits(resolved.config);
   const lockPath = join(resolved.workspaceRoot, ".composer", "cache", "compose.lock");
-  const lock = new WorkspaceLock(lockPath);
+  const lock = new WorkspaceLock(lockPath, { maxHoldMs: limits.maxHoldMs });
   try {
     lock.acquire({
       pid: process.pid,
@@ -105,8 +134,25 @@ export async function orchestrateCompose(opts: ComposeOptions): Promise<ComposeR
     throw err;
   }
 
+  // Bound the compose under a wall-clock budget (FR-004). On expiry the timer aborts
+  // the controller; the race below stops waiting, the lock is released (ownership-checked)
+  // in `finally`, and ComposeTimeoutError propagates to the caller (FR-005/FR-008).
+  const controller = new AbortController();
+  const timeoutError = new ComposeTimeoutError(
+    limits.maxComposeDurationMs,
+    opts.specId,
+    opts.surface,
+  );
+  const timer = setTimeout(() => controller.abort(timeoutError), limits.maxComposeDurationMs);
+  if (typeof timer.unref === "function") timer.unref();
+  const disarm = (): void => clearTimeout(timer);
+
   try {
-    return await runPipeline(opts, resolved, workspace, logger);
+    const pipelinePromise = runPipeline(opts, resolved, workspace, logger, controller.signal, disarm);
+    // Swallow a late rejection of the abandoned pipeline if it resolves post-timeout
+    // (its pre-commit throwIfAborted will reject) so it does not surface as unhandled.
+    pipelinePromise.catch(() => {});
+    return await Promise.race([pipelinePromise, rejectOnAbort(controller.signal)]);
   } catch (err) {
     logger.recordError({
       phase: phaseFromError(err),
@@ -116,6 +162,7 @@ export async function orchestrateCompose(opts: ComposeOptions): Promise<ComposeR
     logger.finalize("error");
     throw err;
   } finally {
+    clearTimeout(timer);
     lock.release();
   }
 }
@@ -134,6 +181,8 @@ async function runPipeline(
   resolved: ResolvedWorkspace,
   workspace: EffectiveWorkspace,
   logger: Logger,
+  signal: AbortSignal,
+  disarm: () => void,
 ): Promise<ComposeResult> {
   // Phase: compile catalog — uses the layered catalog path (project's if
   // present, else parent's). loadCatalog takes the catalog directory, so we
@@ -147,6 +196,7 @@ async function runPipeline(
     outcome: "ok",
     meta: { primitiveCount: catalog.primitives.size },
   });
+  signal.throwIfAborted();
 
   // Phase: structural validate
   const tStructural = Date.now();
@@ -177,6 +227,7 @@ async function runPipeline(
     outcome: "ok",
     meta: { auditCount: auditRules.length },
   });
+  signal.throwIfAborted();
 
   // Load output map (TS module via tsx)
   const outputMap = await loadOutputMap(workspace.outputMapPath);
@@ -199,6 +250,7 @@ async function runPipeline(
     outcome: "ok",
     meta: { fileCount: rendered.length },
   });
+  signal.throwIfAborted();
 
   // Phase: drift check
   const tDrift = Date.now();
@@ -213,6 +265,11 @@ async function runPipeline(
     duration_ms: Date.now() - tDrift,
     outcome: "ok",
   });
+
+  // Final abort checkpoint, then disarm: once past here the budget can no longer fire,
+  // so a timeout never interleaves with the (bounded, uninterruptible) atomic commit (U1).
+  signal.throwIfAborted();
+  disarm();
 
   // Phase: atomic commit
   const tCommit = Date.now();

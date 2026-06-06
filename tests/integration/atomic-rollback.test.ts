@@ -80,6 +80,69 @@ describe("Atomic rollback — compose is all-or-nothing", () => {
     const lockPath = join(fixture.projectRoot, ".composer", "cache", "compose.lock");
     expect(existsSync(lockPath)).toBe(false);
   });
+
+  it("compose timeout → workspace untouched, no lock (US2 / Constitution III / O3)", async () => {
+    const { compose, ComposeTimeoutError } = await import("@composer/core");
+    // A catalog whose module evaluation hangs past the budget (unref'd timer).
+    const hangingCatalog =
+      `import { z } from "zod";\n` +
+      `await new Promise((r) => { const t = setTimeout(r, 60000); if (t && typeof t.unref === "function") t.unref(); });\n` +
+      `export const Hero = z.object({ primitive: z.literal("Hero"), id: z.string(), title: z.string().min(1) }).strict();\n` +
+      `export const HeroMeta = { primitive: "Hero", version: "1.0.0", intent: "x", whenToUse: "x", whenNotToUse: [], fieldGuidance: {}, examples: [{ primitive: "Hero", id: "d", title: "x" }] };\n` +
+      `export const PrimitiveNode = z.discriminatedUnion("primitive", [Hero]);\n`;
+    const local = makeFixture({
+      composerJson: {
+        workspace: "./design",
+        engine: "@composer/typescript@1",
+        limits: { maxComposeDurationMs: 250, maxHoldMs: 600 },
+      },
+      files: {
+        "catalog/index.ts": hangingCatalog,
+        "templates/hero.ts.hbs": STUB_HERO_TEMPLATE,
+        "output.map.ts": STUB_OUTPUT_MAP,
+      },
+    });
+    try {
+      const before = snapshotTree(local.projectRoot);
+      await expect(
+        compose(local.projectRoot, "x", { primitive: "Hero", id: "x", title: "Hi" }),
+      ).rejects.toBeInstanceOf(ComposeTimeoutError);
+      expect(snapshotTree(local.projectRoot)).toEqual(before);
+      expect(
+        existsSync(join(local.workspaceRoot, ".composer", "cache", "compose.lock")),
+      ).toBe(false);
+    } finally {
+      local.cleanup();
+    }
+  });
+
+  it("budget configured but compose finishes → commits normally, no spurious timeout (O5)", async () => {
+    // With the budget disarmed before commit, a normal compose commits and returns
+    // success even though a budget was armed — never a ComposeTimeoutError for committed output.
+    const { compose } = await import("@composer/core");
+    const local = makeFixture({
+      composerJson: {
+        workspace: "./design",
+        engine: "@composer/typescript@1",
+        limits: { maxComposeDurationMs: 5000, maxHoldMs: 10000 },
+      },
+      files: {
+        "catalog/index.ts": STUB_CATALOG_INDEX,
+        "templates/hero.ts.hbs": STUB_HERO_TEMPLATE,
+        "output.map.ts": STUB_OUTPUT_MAP,
+      },
+    });
+    try {
+      const result = await compose(local.projectRoot, "ok", {
+        primitive: "Hero",
+        id: "ok",
+        title: "Hi",
+      });
+      expect(result.files_written.length).toBeGreaterThan(0);
+    } finally {
+      local.cleanup();
+    }
+  });
 });
 
 /**

@@ -25,6 +25,25 @@
       "pattern": "^(@[a-z0-9][a-z0-9-]*/)?[a-z0-9][a-z0-9-]*@[0-9]+$",
       "examples": ["@composer/adapter-next@1", "@acme/composer-adapter-rails@2"]
     },
+    "limits": {
+      "type": "object",
+      "description": "Optional compose/lock tunables (005). The lock TTL must be >= the compose budget plus a safety margin; env vars COMPOSER_COMPOSE_MAX_DURATION_MS and COMPOSER_LOCK_MAX_HOLD_MS override these.",
+      "additionalProperties": false,
+      "properties": {
+        "maxComposeDurationMs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Wall-clock budget for a single compose, in milliseconds (default 120000).",
+          "examples": [120000]
+        },
+        "maxHoldMs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Lock TTL: a lock older than this is reclaimed even if its PID is alive, in milliseconds (default 180000).",
+          "examples": [180000]
+        }
+      }
+    },
     "$schema": {
       "type": "string",
       "description": "Optional reference to this JSON Schema for editor support.",

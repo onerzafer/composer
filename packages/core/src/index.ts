@@ -10,8 +10,20 @@ export {
   validateComposerConfig,
   ComposerConfigError,
   type ComposerConfig,
+  type ComposerLimits,
   type ValidationIssue,
 } from "./workspace/validate-config.js";
+
+// Config — compose/lock limits (TTL + budget) resolution
+export {
+  resolveLimits,
+  DEFAULT_LIMITS,
+  DEFAULT_MAX_COMPOSE_DURATION_MS,
+  DEFAULT_MAX_HOLD_MS,
+  ENV_MAX_COMPOSE_DURATION_MS,
+  ENV_MAX_HOLD_MS,
+  type EffectiveLimits,
+} from "./config/limits.js";
 export { isValidSpecId, assertValidSpecId } from "./workspace/spec-id.js";
 export { assertWithinProject } from "./workspace/path-safety.js";
 export { resolveWorkspace, type ResolvedWorkspace } from "./workspace/resolve.js";
@@ -93,6 +105,7 @@ export {
 export {
   orchestrateCompose,
   LockHeldExposedError,
+  ComposeTimeoutError,
   type ComposeOptions,
   type ComposeResult,
 } from "./pipeline/orchestrator.js";

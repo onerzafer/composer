@@ -50,7 +50,13 @@ composer validate <spec_id>     # dry-run preview
 composer explain <file>:<line>  # which spec/primitive produced this line?
 composer trace <spec_id>:<line> # where did this spec line emit code?
 composer doctor                 # workspace health check (drift, sprawl, etc.)
+composer doctor --fix           # remove reclaimable (stuck) compose locks
+composer compose <spec> --force # force-break a stuck lock, then compose
 ```
+
+A hung compose can never wedge the workspace: the lock self-heals (bounded compose +
+age-based reclaim). See [docs/operations/compose-lock-and-limits.md](docs/operations/compose-lock-and-limits.md)
+for the `maxComposeDurationMs` / `maxHoldMs` tunables and recovery.
 
 ### Backend & CommonJS hosts (NestJS, Express, plain Node)
 

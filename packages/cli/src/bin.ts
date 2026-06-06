@@ -73,13 +73,15 @@ program
   .command("compose <spec_id>")
   .description("Run an atomic compose on an existing spec file")
   .option("--dry-run", "Validate without writing (equivalent to `composer validate`)")
+  .option("--force", "Force-break a stuck lock before composing (last resort)")
   .option("--json", "Machine-readable output")
-  .action(async (specId: string, opts: { dryRun?: boolean; json?: boolean }) => {
+  .action(async (specId: string, opts: { dryRun?: boolean; force?: boolean; json?: boolean }) => {
     try {
       const result = await composeCommand({
         projectRoot: process.cwd(),
         specId,
         dryRun: opts.dryRun,
+        force: opts.force,
       });
       if (opts.json) {
         process.stdout.write(JSON.stringify(result, null, 2) + "\n");
@@ -155,12 +157,14 @@ program
   .description("Run a workspace health check across 8 dimensions")
   .option("--refresh-parent", "Re-materialize the parent adapter from npm")
   .option("--strict", "Exit non-zero on warnings (default: exit 0 unless errors)")
+  .option("--fix", "Remove reclaimable locks (dead-PID, unparseable, or age-stale)")
   .option("--json", "Machine-readable output")
-  .action((opts: { refreshParent?: boolean; strict?: boolean; json?: boolean }) => {
+  .action((opts: { refreshParent?: boolean; strict?: boolean; fix?: boolean; json?: boolean }) => {
     const report = doctor({
       projectRoot: process.cwd(),
       refreshParent: opts.refreshParent,
       strict: opts.strict,
+      fix: opts.fix,
     });
     if (opts.json) {
       process.stdout.write(JSON.stringify(report, null, 2) + "\n");
