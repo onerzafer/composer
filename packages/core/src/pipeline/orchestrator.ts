@@ -4,7 +4,7 @@
 // drift, commit). Acquires the workspace lock for compose, NOT for validate
 // (FR-CONC-004). On any failure, the lock is released and nothing is committed.
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { tsImport } from "tsx/esm/api";
@@ -15,7 +15,6 @@ import { resolveWorkspace, type ResolvedWorkspace } from "../workspace/resolve.j
 import { layerWorkspace, type EffectiveWorkspace } from "../workspace/layer.js";
 import { resolveAndCacheParent, type ResolvedParent } from "../workspace/extends.js";
 import { assertValidSpecId } from "../workspace/spec-id.js";
-import type { AuditRule } from "@composer/adapter-kit";
 import { WorkspaceLock, LockHeldError } from "../lock/workspace-lock.js";
 import { resolveLimits } from "../config/limits.js";
 import { Logger, buildLogPath } from "../log/logger.js";
@@ -25,6 +24,7 @@ import { runAudit, AuditFailedError } from "./phases/audit.js";
 import { renderSpec, RenderFailedError, type RenderedFile } from "./phases/render.js";
 import { driftCheck, DriftDetectedError } from "./phases/drift.js";
 import { commit, type CommittedFile } from "./phases/commit.js";
+import { loadAuditChain, loadSiblingSpecs } from "./audit-loader.js";
 
 export interface ComposeOptions {
   projectRoot: string;
@@ -328,76 +328,6 @@ async function loadOutputMap(path: string): Promise<OutputMap> {
     exported = exported["default"] as Record<string, unknown>;
   }
   return exported as unknown as OutputMap;
-}
-
-async function loadAuditChain(workspace: EffectiveWorkspace): Promise<AuditRule[]> {
-  const rules: AuditRule[] = [];
-  if (workspace.parentAuditPath) {
-    rules.push(await loadAuditModule(workspace.parentAuditPath));
-  }
-  if (workspace.auditPath) {
-    rules.push(await loadAuditModule(workspace.auditPath));
-  }
-  return rules;
-}
-
-/** Process-local cache for loaded audit modules. The tsx loader has a known
- * deadlock when its module cache is queried under certain repeat-load patterns
- * (the 3rd-compose hang surfaced wiring T077); avoiding the round-trip
- * eliminates the trigger. */
-const AUDIT_MODULE_CACHE = new Map<string, AuditRule>();
-
-async function loadAuditModule(path: string): Promise<AuditRule> {
-  const cached = AUDIT_MODULE_CACHE.get(path);
-  if (cached) return cached;
-
-  // Prefer native dynamic-import on shipped .js — fast and never deadlocks.
-  // For .ts (project-authored), fall back to tsImport.
-  let mod: Record<string, unknown>;
-  if (path.endsWith(".js")) {
-    mod = (await import(pathToFileURL(path).href)) as Record<string, unknown>;
-  } else {
-    const baseUrl = pathToFileURL(dirname(path) + "/").href;
-    mod = (await tsImport(path, baseUrl)) as Record<string, unknown>;
-  }
-  let exported = (mod["default"] ?? mod["audit"]) as unknown;
-  // Same CommonJS-host interop unwrap as loadOutputMap: in a CJS host the audit
-  // function may be nested one `default` deeper.
-  if (typeof exported !== "function" && exported && typeof exported === "object") {
-    const inner =
-      (exported as Record<string, unknown>)["default"] ??
-      (exported as Record<string, unknown>)["audit"];
-    if (typeof inner === "function") exported = inner;
-  }
-  if (typeof exported !== "function") {
-    throw new Error(`Audit module ${path} does not export a default audit function`);
-  }
-  AUDIT_MODULE_CACHE.set(path, exported as AuditRule);
-  return exported as AuditRule;
-}
-
-function loadSiblingSpecs(
-  workspaceRoot: string,
-  excludeId: string,
-): { id: string; json: unknown }[] {
-  const specsDir = join(workspaceRoot, "specs");
-  if (!existsSync(specsDir)) return [];
-  // Read all existing specs so cross-spec audits (e.g., unique-name rules)
-  // see the full workspace state. Excludes the spec under compose because
-  // the caller already added the new (parsed) version.
-  const out: { id: string; json: unknown }[] = [];
-  for (const entry of readdirSync(specsDir)) {
-    if (!entry.endsWith(".json")) continue;
-    const id = entry.replace(/\.json$/, "");
-    if (id === excludeId) continue;
-    try {
-      const json = JSON.parse(readFileSync(join(specsDir, entry), "utf8"));
-      out.push({ id, json });
-    } catch {
-      /* skip malformed */
-    }
-  }
-  return out;
 }
 
 function extractSlotRegistry(catalogModule: Record<string, unknown>): import("@composer/adapter-kit").SlotRegistry {

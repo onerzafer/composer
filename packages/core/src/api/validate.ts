@@ -20,6 +20,7 @@ import { semanticValidate, SemanticValidationError } from "../pipeline/phases/se
 import { runAudit, AuditFailedError } from "../pipeline/phases/audit.js";
 import { renderSpec, RenderFailedError } from "../pipeline/phases/render.js";
 import { driftCheck, DriftDetectedError } from "../pipeline/phases/drift.js";
+import { loadAuditChain, loadSiblingSpecs } from "../pipeline/audit-loader.js";
 
 export interface ValidateError {
   path: string;
@@ -99,11 +100,16 @@ export async function validate(
       outcome: "ok",
     });
 
-    await runAudit([], { catalog, specs: [], tokens: workspace.tokens });
+    // Audit — parent first, then project (US3 Acceptance #3), same chain and
+    // sibling-spec set that compose() runs (mirrors orchestrator.ts).
+    const auditRules = await loadAuditChain(workspace);
+    const allSpecs = [{ id: specId, json: parsed }, ...loadSiblingSpecs(workspace.root, specId)];
+    await runAudit(auditRules, { catalog, specs: allSpecs, tokens: workspace.tokens });
     logger.recordPhase({
       phase: "audit",
       duration_ms: 0,
       outcome: "ok",
+      meta: { auditCount: auditRules.length },
     });
 
     const outputMap = await loadOutputMap(workspace.outputMapPath);
