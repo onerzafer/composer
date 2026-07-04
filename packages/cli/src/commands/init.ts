@@ -32,6 +32,7 @@ import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { compose } from "@composer/core";
+import { rewriteAdapterAliases } from "./adapter-aliases.js";
 
 export class InitError extends Error {
   constructor(
@@ -201,6 +202,21 @@ export async function init(options: InitOptions): Promise<InitResult> {
     filesWritten.push(workspaceRelPath(projectRoot, workspaceRoot, "catalog/"));
     filesWritten.push(workspaceRelPath(projectRoot, workspaceRoot, "templates/"));
     filesWritten.push(workspaceRelPath(projectRoot, workspaceRoot, "output.map.ts"));
+
+    // Resolve any adapter-internal `@/*`-style tsconfig `paths` aliases the
+    // copied catalog/templates/output.map.ts reference — v0.1 has no runtime
+    // tsconfig-paths support (tsx's tsImport does not apply `paths`
+    // mappings; see adapter-aliases.ts), so a published adapter authored
+    // against its own alias would otherwise surface as a bare
+    // `Cannot find package '@/...'` at the sample-compose step below.
+    try {
+      rewriteAdapterAliases(workspaceRoot, pkgPath);
+    } catch (err) {
+      throw new InitError(
+        `Failed to resolve adapter-internal aliases for ${pkgName}: ${(err as Error).message}`,
+        2,
+      );
+    }
 
     // Cache parent reference for v0.2 freshness checks (R15 / T099).
     const parentCacheDir = join(projectRoot, ".composer", "cache", "parent");

@@ -1,0 +1,19 @@
+{
+  "name": "@composer-test/adapter-alias",
+  "version": "0.1.0",
+  "description": "Adapter fixture whose catalog imports via an internal `@/*` tsconfig alias — proves `init --extends` resolves adapter-internal aliases in v0.1's self-contained copy model.",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./catalog/*": "./catalog/*",
+    "./templates/*": "./templates/*",
+    "./output.map": "./output.map.js"
+  },
+  "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
+    "zod": "^3.23.0"
+  }
+}
