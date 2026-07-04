@@ -9,7 +9,7 @@ import type { SlotRegistry } from "@composer/adapter-kit";
 export interface HelperBindings {
   json: (value: unknown) => string;
   kebab: (value: unknown) => string;
-  slot: (family: unknown, variant: unknown) => string;
+  slot: (family: unknown, variant: unknown, field?: unknown) => string;
   indent: (n: unknown, text: unknown) => string;
   eq: (a: unknown, b: unknown) => boolean;
 }
@@ -24,7 +24,7 @@ export function makeHelpers(slots: SlotRegistry): HelperBindings {
         .replace(/[\s_]+/g, "-")
         .toLowerCase(),
 
-    slot: (family: unknown, variant: unknown): string => {
+    slot: (family: unknown, variant: unknown, field?: unknown): string => {
       const fam = String(family);
       const variantName = String(variant);
       const familyMap = slots[fam];
@@ -33,7 +33,16 @@ export function makeHelpers(slots: SlotRegistry): HelperBindings {
       if (!entry) {
         throw new Error(`Unknown variant "${variantName}" in slot family "${fam}"`);
       }
-      return entry.exportName;
+      // Handlebars always appends its options hash as the trailing call
+      // argument, so a 2-arg template call `{{slot family variant}}` lands
+      // that hash object here — only a genuine string selects a field.
+      // Default is "exportName" (component to render); pass "importPath"
+      // to resolve where it comes from (e.g. for an import statement).
+      const key = typeof field === "string" ? field : "exportName";
+      if (key !== "exportName" && key !== "importPath") {
+        throw new Error(`Unknown slot field "${key}" — expected "exportName" or "importPath"`);
+      }
+      return entry[key];
     },
 
     indent: (n: unknown, text: unknown): string => {

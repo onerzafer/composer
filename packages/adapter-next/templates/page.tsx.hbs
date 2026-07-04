@@ -1,6 +1,11 @@
 {{!-- adapter-next Page template — emits src/app/<slug>/page.tsx --}}
 {{!-- from: {{spec_path}} primitive=Page slug={{slug}} --}}
 import type { Metadata } from "next";
+{{#each tree}}
+{{#if (eq primitive "Hero")}}
+import { {{slot "Hero" variant}} } from {{{json (slot "Hero" variant "importPath")}}};
+{{/if}}
+{{/each}}
 
 export const metadata: Metadata = { title: {{{json title}}} };
 
@@ -8,22 +13,23 @@ export default function {{kebab slug}}Page() {
   return (
     <main className="container mx-auto px-4 py-12">
 {{#each tree}}
+{{!-- Hero renders via the slot registry (design/catalog/slot-registry.ts):
+     {{slot}} resolves `variant` to an external component's import + export,
+     so this template never inlines Hero markup — only wires the component
+     up (v0.1: one Hero per Page, matching the primitive's single-focal-block
+     intent). --}}
 {{#if (eq primitive "Hero")}}
       {/* Hero · id={{id}} · variant={{variant}} */}
-      <section className="hero hero--{{variant}} text-center py-16">
-        <h1 className="text-4xl font-bold">{{title}}</h1>
+      <{{slot "Hero" variant}}
+        id={{{json id}}}
+        title={{{json title}}}
 {{#if subtitle}}
-        <p className="text-lg text-gray-600 mt-4">{{subtitle}}</p>
+        subtitle={{{json subtitle}}}
 {{/if}}
 {{#if cta}}
-        <a
-          href={{{json cta.href}}}
-          className={`mt-8 inline-block px-6 py-3 rounded ${"{{cta.variant}}" === "secondary" ? "bg-gray-200" : "bg-blue-600 text-white"}`}
-        >
-          {{cta.label}}
-        </a>
+        cta={ {{{json cta}}} }
 {{/if}}
-      </section>
+      />
 {{/if}}
 {{#if (eq primitive "Section")}}
       {/* Section · id={{id}} */}
