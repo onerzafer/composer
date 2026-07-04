@@ -46,12 +46,31 @@ export function compileCatalog(loaded: LoadedCatalog): CompiledCatalog {
   const primitives = new Map<string, z.ZodTypeAny>();
   const meta = new Map<string, PrimitiveMeta>();
 
-  // Walk the discriminated union via Zod's internal optionsMap.
-  const optionsMap = (indexUnion as { _def?: { optionsMap?: Map<string, z.ZodTypeAny> } })._def
-    ?.optionsMap;
-  if (optionsMap instanceof Map) {
-    for (const [name, schema] of optionsMap) {
-      primitives.set(String(name), schema);
+  // Walk the discriminated union's own options + discriminator field name
+  // rather than relying on Zod's precomputed `_def.optionsMap` — that Map
+  // only exists on Zod v3's `ZodDiscriminatedUnion`. Zod v4 restructured
+  // `_def` (`options` array + `discriminator` field name, no `optionsMap`),
+  // so a catalog whose `PrimitiveNode` was built against a different Zod
+  // major version than this package's own (e.g. a Zod v4 catalog — such as
+  // a discriminated union re-composed from another discriminated union's
+  // `.options`, a common cross-catalog authoring pattern) silently walked to
+  // an empty Map: primitiveCount 0. compose still "worked" (it delegates
+  // structural parsing to the raw `index` schema itself), but
+  // discover/scaffold/explain — which iterate `compiled.primitives` — came
+  // up empty. `_def.options` (array of member schemas) and
+  // `_def.discriminator` (the field name) are present on both major
+  // versions, so walking those directly and reading each option's own
+  // discriminator-field literal value(s) off its `.shape` works across both.
+  const def = (indexUnion as { _def?: Record<string, unknown> })._def;
+  const options = def?.["options"];
+  const discriminatorKey = def?.["discriminator"];
+  if (Array.isArray(options) && typeof discriminatorKey === "string") {
+    for (const option of options as z.ZodTypeAny[]) {
+      const shape = (option as unknown as { shape?: Record<string, z.ZodTypeAny> }).shape;
+      const fieldSchema = shape?.[discriminatorKey];
+      for (const value of discriminatorLiteralValues(fieldSchema)) {
+        primitives.set(value, option);
+      }
     }
   }
 
@@ -82,6 +101,38 @@ export function compileCatalog(loaded: LoadedCatalog): CompiledCatalog {
 /** Test-only escape hatch: clears the process-local compiled-catalog cache. */
 export function _resetCompiledCatalogCacheForTests(): void {
   COMPILED_CATALOG_CACHE.clear();
+}
+
+/**
+ * Extract the literal discriminator value(s) a discriminated-union member's
+ * discriminator field accepts. Handles both Zod major versions' internal
+ * `_def` shapes for the two discriminator kinds Zod's own
+ * `discriminatedUnion()` supports:
+ *   - `ZodLiteral` — v3: `{ typeName: "ZodLiteral", value }` (single value);
+ *     v4: `{ type: "literal", values: [...] }` (one or more values).
+ *   - `ZodEnum` — v3: `{ typeName: "ZodEnum", values: [...] }`; v4:
+ *     `{ type: "enum", entries: { KEY: value, ... } }`.
+ * Returns an empty array (rather than throwing) for any other schema shape
+ * so an unrecognized/wrapped discriminator field is skipped, not fatal.
+ */
+function discriminatorLiteralValues(fieldSchema: unknown): string[] {
+  const def = (fieldSchema as { _def?: Record<string, unknown> } | undefined)?._def;
+  if (!def) return [];
+  // v4 ZodLiteral's `values` and v3 ZodEnum's `values` are both plain arrays
+  // of the accepted literal values — same handling covers both.
+  if (Array.isArray(def["values"])) {
+    return (def["values"] as unknown[]).map(String);
+  }
+  // v3 ZodLiteral: single `value`.
+  if ("value" in def && def["value"] !== undefined) {
+    return [String(def["value"])];
+  }
+  // v4 ZodEnum: `entries` record of key → value.
+  const entries = def["entries"];
+  if (entries && typeof entries === "object") {
+    return Object.values(entries as Record<string, unknown>).map(String);
+  }
+  return [];
 }
 
 /** Loose semver-major.minor.patch compare; returns -1/0/1. */
