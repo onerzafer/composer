@@ -101,15 +101,18 @@ export async function validate(
     });
 
     // Audit — parent first, then project (US3 Acceptance #3), same chain and
-    // sibling-spec set that compose() runs (mirrors orchestrator.ts).
+    // sibling-spec set that compose() runs (mirrors orchestrator.ts). Warnings
+    // are surfaced on the result (not discarded) so validate() gives agents/CI
+    // the same signal compose() would.
     const auditRules = await loadAuditChain(workspace);
     const allSpecs = [{ id: specId, json: parsed }, ...loadSiblingSpecs(workspace.root, specId)];
-    await runAudit(auditRules, { catalog, specs: allSpecs, tokens: workspace.tokens });
+    const auditWarnings = await runAudit(auditRules, { catalog, specs: allSpecs, tokens: workspace.tokens });
+    warnings.push(...auditWarnings.map((w) => ({ path: w.path ?? "(audit)", message: w.message })));
     logger.recordPhase({
       phase: "audit",
       duration_ms: 0,
       outcome: "ok",
-      meta: { auditCount: auditRules.length },
+      meta: { auditCount: auditRules.length, warningCount: auditWarnings.length },
     });
 
     const outputMap = await loadOutputMap(workspace.outputMapPath);

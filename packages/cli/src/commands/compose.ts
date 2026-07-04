@@ -36,6 +36,8 @@ export interface ComposeCliOptions {
   dryRun?: boolean;
   /** Force-break an existing lock before composing (last-resort operator escape hatch, FR-010). */
   force?: boolean;
+  /** Escalate any audit warning into an audit failure (exit 3). No-op with --dry-run. */
+  strict?: boolean;
 }
 
 export async function composeCommand(
@@ -71,7 +73,10 @@ export async function composeCommand(
       const preview = await engineValidate(opts.projectRoot, opts.specId, json);
       return { ok: true, preview };
     }
-    return await engineCompose(opts.projectRoot, opts.specId, json, { surface: "cli" });
+    return await engineCompose(opts.projectRoot, opts.specId, json, {
+      surface: "cli",
+      strict: opts.strict,
+    });
   } catch (err) {
     throw translateComposeError(err);
   }

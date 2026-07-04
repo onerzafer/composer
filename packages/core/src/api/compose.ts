@@ -11,12 +11,13 @@ export async function compose(
   projectRoot: string,
   specId: string,
   json: unknown,
-  options: { surface?: "mcp" | "cli" } = {},
+  options: { surface?: "mcp" | "cli"; strict?: boolean } = {},
 ): Promise<ComposeResult> {
   return orchestrateCompose({
     projectRoot,
     specId,
     json,
     surface: options.surface ?? "cli",
+    strict: options.strict,
   });
 }

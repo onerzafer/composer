@@ -78,23 +78,29 @@ program
   .description("Run an atomic compose on an existing spec file")
   .option("--dry-run", "Validate without writing (equivalent to `composer validate`)")
   .option("--force", "Force-break a stuck lock before composing (last resort)")
+  .option("--strict", "Exit non-zero (3) if the audit reports any warning, not just errors")
   .option("--json", "Machine-readable output")
-  .action(async (specId: string, opts: { dryRun?: boolean; force?: boolean; json?: boolean }) => {
+  .action(async (specId: string, opts: { dryRun?: boolean; force?: boolean; strict?: boolean; json?: boolean }) => {
     try {
       const result = await composeCommand({
         projectRoot: process.cwd(),
         specId,
         dryRun: opts.dryRun,
         force: opts.force,
+        strict: opts.strict,
       });
       if (opts.json) {
         process.stdout.write(JSON.stringify(result, null, 2) + "\n");
       } else if ("preview" in result) {
         process.stdout.write(`composer: dry-run OK — would write\n`);
       } else {
+        const warningLines = result.audit.warnings.map(
+          (w) => `  warn ${w.path ?? "(audit)"}: ${w.message}`,
+        );
         process.stdout.write(
           `composer: composed ${specId} → ${result.files_written.length} file(s)\n` +
             result.files_written.map((f) => `  ${f.kind} ${f.path}`).join("\n") +
+            (warningLines.length > 0 ? "\n" + warningLines.join("\n") : "") +
             "\n",
         );
       }
@@ -113,8 +119,10 @@ program
       if (opts.json) {
         process.stdout.write(JSON.stringify(result, null, 2) + "\n");
       } else {
+        const warningLines = result.warnings.map((w) => `  warn ${w.path}: ${w.message}`);
         process.stdout.write(
-          `composer: validate OK — would write ${result.would_write.length} file(s)\n`,
+          `composer: validate OK — would write ${result.would_write.length} file(s)\n` +
+            (warningLines.length > 0 ? warningLines.join("\n") + "\n" : ""),
         );
       }
     } catch (err) {

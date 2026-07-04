@@ -53,6 +53,7 @@ Usage: composer compose <spec_id> [options]
 
 Options:
   --dry-run            Equivalent to `composer validate <spec_id>`
+  --strict             Exit non-zero (3) if the audit reports any warning, not just errors
   --json               Machine-readable output
   --workspace <path>   Override workspace discovery
 
@@ -60,7 +61,7 @@ Exit codes:
   0   compose succeeded (or dry-run completed with ok=true)
   1   structural validation failed
   2   semantic validation failed
-  3   audit failed
+  3   audit failed (including warnings escalated by --strict)
   4   drift detected — generated file has been hand-edited
   5   render failed (template or prep exception)
   6   IO failed (write/rename)
@@ -71,8 +72,9 @@ Exit codes:
 **Behavior**:
 - Reads spec from `<workspace>/specs/<spec_id>.json`.
 - Runs the full atomic pipeline (same as MCP `compose` tool — FR-003).
-- On success: prints files written + log path.
+- On success: prints files written + log path, followed by any audit warnings.
 - On failure: prints structured error, phase name, suggestions; exit code matches the failure type.
+- `--strict`: without it, audit warnings are reported but do not fail the compose (`audit.ok` stays `true`, warnings are listed); with it, any warning collected across the audit chain is escalated into an audit failure (same as an audit error — exit 3). Has no effect combined with `--dry-run` (dry-run always delegates to `validate`, which never escalates).
 
 ---
 

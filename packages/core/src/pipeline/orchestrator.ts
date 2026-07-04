@@ -31,6 +31,8 @@ export interface ComposeOptions {
   specId: string;
   json: unknown;
   surface: "mcp" | "cli";
+  /** `--strict`: escalate any audit warning into an audit failure (AuditFailedError, exit 3). */
+  strict?: boolean;
 }
 
 export interface ComposeResult {
@@ -216,16 +218,22 @@ async function runPipeline(
     outcome: "ok",
   });
 
-  // Phase: audit — parent first, then project (US3 Acceptance #3).
+  // Phase: audit — parent first, then project (US3 Acceptance #3). Warnings
+  // are collected (not discarded) and threaded through to the ComposeResult;
+  // `--strict` escalates any of them into an AuditFailedError (exit 3).
   const tAudit = Date.now();
   const auditRules = await loadAuditChain(workspace);
   const allSpecs = [{ id: opts.specId, json: parsed }, ...loadSiblingSpecs(workspace.root, opts.specId)];
-  await runAudit(auditRules, { catalog, specs: allSpecs, tokens: workspace.tokens });
+  const auditWarnings = await runAudit(
+    auditRules,
+    { catalog, specs: allSpecs, tokens: workspace.tokens },
+    { strict: opts.strict },
+  );
   logger.recordPhase({
     phase: "audit",
     duration_ms: Date.now() - tAudit,
     outcome: "ok",
-    meta: { auditCount: auditRules.length },
+    meta: { auditCount: auditRules.length, warningCount: auditWarnings.length },
   });
   signal.throwIfAborted();
 
@@ -295,7 +303,7 @@ async function runPipeline(
   return {
     spec_saved: commitResult.spec_saved,
     files_written: commitResult.files_written,
-    audit: { ok: true, warnings: [] },
+    audit: { ok: true, warnings: auditWarnings },
     log: logger.logFilePath,
     suggested_next: "done",
   };

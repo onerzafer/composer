@@ -131,6 +131,7 @@ export {
   runAudit,
   AuditFailedError,
   type AuditWorkspaceState,
+  type RunAuditOptions,
 } from "./pipeline/phases/audit.js";
 export {
   renderSpec,
