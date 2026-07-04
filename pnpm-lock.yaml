@@ -74,6 +74,9 @@ importers:
       '@composer/typescript':
         specifier: workspace:*
         version: link:../typescript
+      esbuild:
+        specifier: ^0.28.0
+        version: 0.28.0
       handlebars:
         specifier: ^4.7.8
         version: 4.7.9

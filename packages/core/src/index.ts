@@ -82,8 +82,15 @@ export {
   runPrepInSandbox,
   assertPrepShape,
   assertPrepSourceSafe,
+  PrepStageError,
   type SandboxContext,
+  type PrepFailureStage,
 } from "./render/sandbox.js";
+export {
+  loadPrep,
+  _resetPrepCacheForTests,
+  type LoadedPrep,
+} from "./render/prep-loader.js";
 export { buildBanner, buildBlockComment, type BlockMarker } from "./render/banner.js";
 
 // Source map

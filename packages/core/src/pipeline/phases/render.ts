@@ -4,9 +4,10 @@
 // primitive's Handlebars template, and prepends the DO-NOT-EDIT banner +
 // per-block source-map comment.
 //
-// Prep support (optional <primitive>.prep.ts) is a TODO for v0.2 — gated
-// behind a clear error so adopters know the limitation rather than getting
-// silently-incorrect output.
+// Prep support (v0.2 deferral #2 — optional <primitive>.prep.ts): when a
+// prep file exists for a primitive, it is bundled (`loadPrep`) and executed
+// in a sandboxed vm (`runPrepInSandbox`); its return value is merged over
+// the node before templating. See design "Prep Loader — Minimal Design".
 
 import Handlebars from "handlebars";
 type HandlebarsTemplateDelegate = (context: unknown) => string;
@@ -17,6 +18,8 @@ import type { OutputMap, OutputPath, SlotRegistry } from "@composer/adapter-kit"
 import type { EffectiveWorkspace } from "../../workspace/layer.js";
 import { registerHelpers } from "../../render/helpers.js";
 import { buildBanner, buildBlockComment } from "../../render/banner.js";
+import { loadPrep } from "../../render/prep-loader.js";
+import { PrepStageError, runPrepInSandbox } from "../../render/sandbox.js";
 import type { FileEntry } from "../../sourcemap/persist.js";
 
 export interface RenderInput {
@@ -119,15 +122,32 @@ async function renderOne(
   }
   const templateSource = readFileSync(templatePath, "utf8");
 
-  // v0.2 will support <name>.prep.ts; for v0.1 raise if a prep file is present.
   const prepName = templateName.replace(/\.[^.]+\.hbs$/, ".prep.ts");
-  if (input.workspace.prepPaths.has(prepName)) {
-    throw new RenderFailedError(
-      `Prep file ${prepName} detected — prep support is deferred to v0.2 (Composer v0.1 supports Handlebars-only templates).`,
-    );
-  }
+  const prepPath = input.workspace.prepPaths.get(prepName);
 
-  const renderCtx: Record<string, unknown> = { ...node, spec_path: input.specRelPath };
+  let renderCtx: Record<string, unknown> = { ...node, spec_path: input.specRelPath };
+  if (prepPath) {
+    try {
+      const { source } = await loadPrep(prepPath);
+      const prepResult = await runPrepInSandbox(source, node, {
+        slots: input.slotRegistry,
+        tokens: input.workspace.tokens ?? {},
+      });
+      // Prep keys win over node keys; spec_path is reserved and always
+      // engine-set, so it is applied last regardless of what prep returns.
+      renderCtx = { ...node, ...prepResult, spec_path: input.specRelPath };
+    } catch (err) {
+      const stage = err instanceof PrepStageError ? err.stage : "exec";
+      const innerMessage =
+        typeof (err as { message?: unknown } | null | undefined)?.message === "string"
+          ? (err as { message: string }).message
+          : String(err);
+      throw new RenderFailedError(
+        `Prep failed for ${primitive} (node ${nodeId}) in ${prepName} [${stage}]: ${innerMessage}`,
+        err,
+      );
+    }
+  }
 
   const hb = Handlebars.create();
   registerHelpers(hb, input.slotRegistry);
