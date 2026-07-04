@@ -55,6 +55,18 @@ export {
 } from "./commands/validate.js";
 
 export {
+  discoverCommand,
+  DiscoverCliError,
+  type DiscoverCliOptions,
+} from "./commands/discover.js";
+
+export {
+  scaffoldCommand,
+  ScaffoldCliError,
+  type ScaffoldCliOptions,
+} from "./commands/scaffold.js";
+
+export {
   RESERVED_COMMANDS,
   ReservedNotImplementedError,
   type ReservedCommand,

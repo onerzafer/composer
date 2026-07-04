@@ -20,6 +20,10 @@ import {
   ComposeCliError,
   validateCommand,
   ValidateCliError,
+  discoverCommand,
+  DiscoverCliError,
+  scaffoldCommand,
+  ScaffoldCliError,
   RESERVED_COMMANDS,
   ReservedNotImplementedError,
   doctor,
@@ -112,6 +116,52 @@ program
         process.stdout.write(
           `composer: validate OK — would write ${result.would_write.length} file(s)\n`,
         );
+      }
+    } catch (err) {
+      handleError(err, opts.json);
+    }
+  });
+
+program
+  .command("discover")
+  .description("List the project's primitives, specs, guidelines, and tokens")
+  .option("--json", "Machine-readable output")
+  .action(async (opts: { json?: boolean }) => {
+    try {
+      const result = await discoverCommand({ projectRoot: process.cwd() });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else {
+        process.stdout.write(
+          `composer: discover — ${result.primitives.length} primitive(s), ${result.specs.length} spec(s)\n` +
+            `  engine:  ${result.project.engine}\n` +
+            `  adapter: ${result.project.adapter ?? "none"}\n`,
+        );
+      }
+    } catch (err) {
+      handleError(err, opts.json);
+    }
+  });
+
+program
+  .command("scaffold")
+  .description("Read full primitive schema + skeleton, or an existing spec's JSON")
+  .option("--primitive <name>", "Primitive name — returns schema, examples, and a starter skeleton")
+  .option("--intent <text>", "Free-form feature description (used with --primitive)")
+  .option("--spec <spec_id>", "Existing spec ID — returns its full JSON content")
+  .option("--json", "Machine-readable output")
+  .action(async (opts: { primitive?: string; intent?: string; spec?: string; json?: boolean }) => {
+    try {
+      const result = await scaffoldCommand({
+        projectRoot: process.cwd(),
+        primitive: opts.primitive,
+        intent: opts.intent,
+        specId: opts.spec,
+      });
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+      } else {
+        process.stdout.write(`composer: scaffold ${result.spec_id} ready — suggested_next=${result.suggested_next}\n`);
       }
     } catch (err) {
       handleError(err, opts.json);
@@ -270,6 +320,8 @@ function handleError(err: unknown, asJson: boolean | undefined): never {
     err instanceof TraceError ||
     err instanceof ComposeCliError ||
     err instanceof ValidateCliError ||
+    err instanceof DiscoverCliError ||
+    err instanceof ScaffoldCliError ||
     err instanceof PromoteError ||
     err instanceof IngestCliError ||
     err instanceof GrammarCliError ||
