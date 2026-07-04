@@ -16,11 +16,25 @@ export interface CompiledCatalog {
 }
 
 /**
+ * Process-local cache of compiled catalogs, keyed by the same content hash
+ * as `CATALOG_MODULE_CACHE` in loader.ts (`loaded.contentHash`). Compiling is
+ * already cheap relative to the `tsx` transpile it follows, but caching it
+ * too means a cache hit skips the discriminated-union walk as well, and
+ * gives `compileCatalog` the same invalidate-on-change guarantee as the load
+ * step it wraps.
+ */
+const COMPILED_CATALOG_CACHE = new Map<string, CompiledCatalog>();
+
+/**
  * Inspect a loaded catalog module and produce its runtime view.
  * Convention: catalog must export `PrimitiveNode` (the discriminated union),
  * and one `<Name>Meta` object per primitive (e.g., `HeroMeta`, `SectionMeta`).
+ * Cached in-process by `loaded.contentHash` — see `COMPILED_CATALOG_CACHE`.
  */
 export function compileCatalog(loaded: LoadedCatalog): CompiledCatalog {
+  const cached = COMPILED_CATALOG_CACHE.get(loaded.contentHash);
+  if (cached) return cached;
+
   const module = loaded.module;
   const indexUnion = module["PrimitiveNode"];
   if (!indexUnion || typeof indexUnion !== "object") {
@@ -55,12 +69,19 @@ export function compileCatalog(loaded: LoadedCatalog): CompiledCatalog {
     }
   }
 
-  return {
+  const compiled: CompiledCatalog = {
     primitives,
     index: indexUnion as z.ZodTypeAny,
     meta,
     catalogVersion: maxVersion,
   };
+  COMPILED_CATALOG_CACHE.set(loaded.contentHash, compiled);
+  return compiled;
+}
+
+/** Test-only escape hatch: clears the process-local compiled-catalog cache. */
+export function _resetCompiledCatalogCacheForTests(): void {
+  COMPILED_CATALOG_CACHE.clear();
 }
 
 /** Loose semver-major.minor.patch compare; returns -1/0/1. */

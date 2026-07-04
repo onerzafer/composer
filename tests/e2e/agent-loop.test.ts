@@ -204,15 +204,12 @@ describe("E2E — agent composes a real Next.js page (US1 SC-001)", () => {
     },
   );
 
-  // Skipped in v0.1: 2x compose against adapter-next exceeds even a 120s timeout
-  // on the CI hardware because each compose pays a tsx cold-start cost for the
-  // catalog (~30s+ on a fresh fixture). The same idempotence property is asserted
-  // by tests/contract/bijection.test.ts using the stub catalog — same drift-
-  // catching coverage, no adapter-next overhead. Re-enable when v0.2 lands
-  // catalog-caching-across-composes.
-  it.skip(
-    "idempotence on adapter-next — composing same spec twice produces byte-identical output (deferred to v0.2: catalog cache)",
-    { timeout: 180_000 },
+  // v0.2 catalog caching (deferred item #1): the second compose in this test
+  // hits the process-local compiled-catalog cache (keyed by content hash of
+  // the catalog sources), so it no longer pays the ~30s tsx cold-start twice.
+  it(
+    "idempotence on adapter-next — composing same spec twice produces byte-identical output",
+    { timeout: E2E_TIMEOUT_MS },
     async () => {
     const { createServer } = await import("@composer/mcp");
     const server = createServer({ cwd: fixture.projectRoot });
