@@ -110,6 +110,32 @@ async function renderNode(
   }
 }
 
+/**
+ * Dedupe exact-duplicate single-line `import ... ;` statements in a rendered
+ * file. A template like adapter-next's page.tsx.hbs loops over the tree and
+ * emits one `import { X } from "path"` line per node that resolves via
+ * `{{slot}}` — if two nodes resolve to the *same* slot component (e.g. two
+ * Hero nodes both using the "centered" variant), that loop naturally emits
+ * the identical import line twice, which is invalid TypeScript (duplicate
+ * named import). Only a byte-for-byte repeat of an earlier import line is
+ * dropped; distinct imports (different symbols/paths) are left untouched.
+ */
+function dedupeImportLines(source: string): string {
+  const seen = new Set<string>();
+  const lines = source.split("\n");
+  const out: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const isImportStatement = trimmed.startsWith("import ") && trimmed.endsWith(";");
+    if (isImportStatement) {
+      if (seen.has(trimmed)) continue;
+      seen.add(trimmed);
+    }
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
 function resolveOutputs(map: OutputMap, primitive: string, node: unknown): OutputPath[] {
   const resolver = map.byPrimitive[primitive];
   // A primitive without an output mapping is an *embedded* primitive — its
@@ -184,6 +210,7 @@ async function renderOne(
       err,
     );
   }
+  rendered = dedupeImportLines(rendered);
 
   const ext = outputPath.language || extname(outputPath.path).slice(1) || "";
   const banner = buildBanner(input.specRelPath, outputPath.path, ext);

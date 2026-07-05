@@ -113,4 +113,40 @@ describe("Slot registry — Hero primitive renders via {{slot}}, not inlined mar
       'cta={ {"label":"Get started","href":"/start","variant":"primary"} }',
     );
   });
+
+  it("two Hero nodes resolving the same slot variant emit a single deduplicated import", async () => {
+    const { compose } = await import("@composer/core");
+
+    const result = (await compose(fixture.projectRoot, "double-hero-page", {
+      primitive: "Page",
+      slug: "double-hero-page",
+      title: "Double hero",
+      tree: [
+        {
+          primitive: "Hero",
+          id: "hero-1",
+          variant: "centered",
+          title: "Ship faster",
+        },
+        {
+          primitive: "Hero",
+          id: "hero-2",
+          variant: "centered",
+          title: "Ship even faster",
+        },
+      ],
+    })) as ComposeResult;
+
+    const generated = readFileSync(join(fixture.projectRoot, result.files_written[0]!.path), "utf8");
+
+    // Both Hero nodes render, each by its own id/title...
+    expect(generated).toMatch(/<CenteredHero\b[\s\S]*id="hero-1"/);
+    expect(generated).toMatch(/<CenteredHero\b[\s\S]*id="hero-2"/);
+    // ...but the shared import is only emitted once (duplicate named imports
+    // from the same module are invalid TypeScript).
+    const importOccurrences = generated.match(
+      /import \{ CenteredHero \} from "@\/components\/heroes";/g,
+    );
+    expect(importOccurrences).toHaveLength(1);
+  });
 });
