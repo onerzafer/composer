@@ -107,8 +107,21 @@ Helpers available in every template:
 | `{{eq a b}}` | Truthy if a === b — useful inside `{{#if …}}` |
 | `{{slot "PrimitiveName" variant=…}}` | Render a slot from the slot registry |
 | `{{indent " " block}}` | Indent every line of a sub-render |
+| `{{renderPrimitive node}}` | Delegate to an *embedded* child primitive's own `<primitive>.<language>.hbs` file and splice its output inline |
 
 The 30-line discipline (constitution V): a primitive's template should fit on one screen. `composer doctor` flags violators.
+
+### Embedded primitives still get their own template file
+
+A primitive with no `byPrimitive` entry (§3) is embedded — it emits no file of
+its own. That does **not** mean its markup should be hand-inlined into the
+parent's template: give it its own `templates/<primitive>.<language>.hbs`
+file like any other primitive, and have the parent delegate to it with
+`{{renderPrimitive node}}` inside a `{{#each …}}` loop. `adapter-next`'s
+`page.tsx.hbs` only owns page-level plumbing (imports, `<main>` wrapper); the
+Hero/Section/Card/CTA markup each live in their own template and are spliced
+in via `{{renderPrimitive}}` — this is what keeps every file, embedded or
+not, inside the 30-line discipline.
 
 ### `*.prep.ts` files (v0.2)
 

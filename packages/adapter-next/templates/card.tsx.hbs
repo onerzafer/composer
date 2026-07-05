@@ -1,0 +1,11 @@
+{{!-- adapter-next Card template — embedded; rendered by section.tsx.hbs via
+     {{renderPrimitive}} for each entry in `cards` (docs/adapters/authoring.md §2). --}}
+{{!-- from: spec={{spec_path}} primitive=Card id={{id}} --}}
+{/* Card · id={{id}} */}
+<article className="rounded border p-6">
+{{#if icon}}
+  <div className="text-2xl mb-2" aria-hidden="true">{{icon}}</div>
+{{/if}}
+  <h3 className="font-semibold">{{title}}</h3>
+  <p className="text-gray-600 mt-2">{{description}}</p>
+</article>

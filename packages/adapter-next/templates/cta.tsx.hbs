@@ -1,0 +1,12 @@
+{{!-- adapter-next CTA template — embedded; Page's template delegates here
+     via {{renderPrimitive}} (docs/adapters/authoring.md §2). --}}
+{{!-- from: spec={{spec_path}} primitive=CTA id={{id}} variant={{variant}} --}}
+{/* CTA · id={{id}} · variant={{variant}} */}
+<div className="text-center py-12">
+  <a
+    href={{{json href}}}
+    className={`inline-block px-6 py-3 rounded ${"{{variant}}" === "secondary" ? "bg-gray-200" : "bg-blue-600 text-white"}`}
+  >
+    {{label}}
+  </a>
+</div>

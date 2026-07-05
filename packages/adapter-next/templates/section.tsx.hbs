@@ -1,0 +1,15 @@
+{{!-- adapter-next Section template — embedded; delegates each card to
+     card.tsx.hbs via {{renderPrimitive}} (template-per-primitive model,
+     docs/adapters/authoring.md §2). --}}
+{{!-- from: spec={{spec_path}} primitive=Section id={{id}} --}}
+{/* Section · id={{id}} */}
+<section className="py-12">
+{{#if title}}
+  <h2 className="text-2xl font-semibold mb-6">{{title}}</h2>
+{{/if}}
+  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+{{#each cards}}
+    {{indent 4 (renderPrimitive this)}}
+{{/each}}
+  </div>
+</section>

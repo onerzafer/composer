@@ -1,0 +1,18 @@
+{{!-- adapter-next Hero template — embedded (no output-map entry); Page's
+     template delegates here via {{renderPrimitive}} (docs/adapters/authoring.md §2). --}}
+{{!-- from: spec={{spec_path}} primitive=Hero id={{id}} variant={{variant}} --}}
+{{!-- Renders via the slot registry (catalog/slot-registry.ts): {{slot}}
+     resolves `variant` to an external component's import + export, so this
+     template never inlines Hero markup — only wires the component up (v0.1:
+     one Hero per Page, matching the primitive's single-focal-block intent). --}}
+{/* Hero · id={{id}} · variant={{variant}} */}
+<{{slot "Hero" variant}}
+  id={{{json id}}}
+  title={{{json title}}}
+{{#if subtitle}}
+  subtitle={{{json subtitle}}}
+{{/if}}
+{{#if cta}}
+  cta={ {{{json cta}}} }
+{{/if}}
+/>

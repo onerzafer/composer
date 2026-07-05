@@ -190,7 +190,11 @@ async function renderOne(
   }
 
   const hb = Handlebars.create();
-  registerHelpers(hb, input.slotRegistry);
+  registerHelpers(hb, input.slotRegistry, {
+    templatePaths: input.workspace.templatePaths,
+    language: outputPath.language,
+    specPath: input.specRelPath,
+  });
   let compiled: HandlebarsTemplateDelegate;
   try {
     compiled = hb.compile(templateSource, { strict: false, noEscape: true });

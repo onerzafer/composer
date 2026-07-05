@@ -1,4 +1,9 @@
-{{!-- adapter-next Page template — emits src/app/<slug>/page.tsx --}}
+{{!-- adapter-next Page template — emits src/app/<slug>/page.tsx.
+     Imports are collected up front (import declarations can't sit inside the
+     function body); each tree node's markup is delegated to its own
+     primitive's template via {{renderPrimitive}} (template-per-primitive
+     model, docs/adapters/authoring.md §2) — this file only owns page-level
+     plumbing, not any embedded primitive's markup. --}}
 {{!-- from: {{spec_path}} primitive=Page slug={{slug}} --}}
 import type { Metadata } from "next";
 {{#each tree}}
@@ -13,55 +18,7 @@ export default function {{kebab slug}}Page() {
   return (
     <main className="container mx-auto px-4 py-12">
 {{#each tree}}
-{{!-- Hero renders via the slot registry (design/catalog/slot-registry.ts):
-     {{slot}} resolves `variant` to an external component's import + export,
-     so this template never inlines Hero markup — only wires the component
-     up (v0.1: one Hero per Page, matching the primitive's single-focal-block
-     intent). --}}
-{{#if (eq primitive "Hero")}}
-      {/* Hero · id={{id}} · variant={{variant}} */}
-      <{{slot "Hero" variant}}
-        id={{{json id}}}
-        title={{{json title}}}
-{{#if subtitle}}
-        subtitle={{{json subtitle}}}
-{{/if}}
-{{#if cta}}
-        cta={ {{{json cta}}} }
-{{/if}}
-      />
-{{/if}}
-{{#if (eq primitive "Section")}}
-      {/* Section · id={{id}} */}
-      <section className="py-12">
-{{#if title}}
-        <h2 className="text-2xl font-semibold mb-6">{{title}}</h2>
-{{/if}}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-{{#each cards}}
-          {/* Card · id={{id}} */}
-          <article className="rounded border p-6">
-{{#if icon}}
-            <div className="text-2xl mb-2" aria-hidden="true">{{icon}}</div>
-{{/if}}
-            <h3 className="font-semibold">{{title}}</h3>
-            <p className="text-gray-600 mt-2">{{description}}</p>
-          </article>
-{{/each}}
-        </div>
-      </section>
-{{/if}}
-{{#if (eq primitive "CTA")}}
-      {/* CTA · id={{id}} · variant={{variant}} */}
-      <div className="text-center py-12">
-        <a
-          href={{{json href}}}
-          className={`inline-block px-6 py-3 rounded ${"{{variant}}" === "secondary" ? "bg-gray-200" : "bg-blue-600 text-white"}`}
-        >
-          {{label}}
-        </a>
-      </div>
-{{/if}}
+      {{indent 6 (renderPrimitive this)}}
 {{/each}}
     </main>
   );
