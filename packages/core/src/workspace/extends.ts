@@ -146,6 +146,61 @@ export function walkExtendsChain(projectRoot: string, extendsSpec: string): stri
 }
 
 /**
+ * Artifacts copied from a parent adapter's package root into its
+ * `.composer/cache/parent/<safeName>/` materialization.
+ *
+ * `src` is included alongside `catalog`/`templates` because a parent's
+ * `catalog/index.ts` (or its templates' `.prep.ts` files) commonly imports
+ * sibling source via relative paths like `../src/catalog` — this is how
+ * `@sifir/design-system` ships its real catalog. Those imports are resolved
+ * relative to the *cached copy's* location (`layerWorkspace`/`loadCatalog`
+ * load `cacheRoot/catalog/index.ts`, not the original `packageRoot` one), so
+ * `../src` must exist as a sibling of `catalog/` inside the cache too, or the
+ * import throws a module-not-found error at compile-catalog time.
+ */
+const PARENT_COPIES: Array<[string, "dir" | "file"]> = [
+  ["catalog", "dir"],
+  ["src", "dir"],
+  ["templates", "dir"],
+  ["output.map.ts", "file"],
+  ["output.map.js", "file"],
+  ["output.map.js.map", "file"],
+  ["audit.ts", "file"],
+  ["audit.js", "file"],
+  ["audit.js.map", "file"],
+  ["bootstrap.ts", "file"],
+  ["bootstrap.js", "file"],
+  ["bootstrap.js.map", "file"],
+];
+
+/**
+ * Whether a previously-recorded materialization is still structurally
+ * complete on disk: for every artifact the parent actually ships at
+ * `packageRoot`, the corresponding copy under `cacheRoot` must still exist.
+ *
+ * This guards against the in-memory `MATERIALIZED` map going stale relative
+ * to the filesystem — e.g. a prior partial copy (an older engine version
+ * that didn't copy `src/`), or `.composer/cache/` being cleaned externally
+ * mid-process. Without re-verifying, the process-local guard would trust its
+ * memory of "already materialized" forever and never self-heal; a project
+ * would need a fresh process (new `MATERIALIZED` map) to recover. Read-only
+ * `existsSync`/`statSync` checks only — never triggers a re-copy by itself,
+ * so it doesn't reintroduce the repeated-fs-write tsx deadlock the memo
+ * guards against.
+ */
+function isMaterializationComplete(packageRoot: string, cacheRoot: string): boolean {
+  if (!existsSync(join(cacheRoot, "manifest.json"))) return false;
+  for (const [rel, kind] of PARENT_COPIES) {
+    const src = join(packageRoot, rel);
+    if (!existsSync(src)) continue;
+    const isExpectedKind = kind === "dir" ? statSync(src).isDirectory() : statSync(src).isFile();
+    if (!isExpectedKind) continue;
+    if (!existsSync(join(cacheRoot, rel))) return false;
+  }
+  return true;
+}
+
+/**
  * Resolve, cycle-check, and materialize the parent adapter into
  * `.composer/cache/parent/<safeName>/`. Returns a `ResolvedParent` describing
  * which artifacts the parent ships (callers branch on the `has*` flags).
@@ -155,10 +210,11 @@ export function walkExtendsChain(projectRoot: string, extendsSpec: string): stri
  * file copy is cheap and we always need a fresh view).
  */
 /** Process-local idempotence guard. Each (cacheRoot, version) pair is
- * materialized at most once per process. Re-copying on every compose triggers
- * filesystem activity that can deadlock `tsx`'s loader cache when modules
- * have been previously imported from the same project (the 3rd-compose hang
- * we surfaced wiring T077). */
+ * materialized at most once per process (subject to `isMaterializationComplete`
+ * re-verification below). Re-copying on every compose triggers filesystem
+ * activity that can deadlock `tsx`'s loader cache when modules have been
+ * previously imported from the same project (the 3rd-compose hang we
+ * surfaced wiring T077). */
 const MATERIALIZED = new Map<string, string>();
 
 export function resolveAndCacheParent(
@@ -175,23 +231,11 @@ export function resolveAndCacheParent(
   mkdirSync(cacheRoot, { recursive: true });
 
   const cacheKey = `${cacheRoot}@${version}`;
-  const alreadyMaterialized = MATERIALIZED.get(cacheKey) === version;
+  const alreadyMaterialized =
+    MATERIALIZED.get(cacheKey) === version && isMaterializationComplete(packageRoot, cacheRoot);
 
   if (!alreadyMaterialized) {
-    const copies: Array<[string, "dir" | "file"]> = [
-      ["catalog", "dir"],
-      ["templates", "dir"],
-      ["output.map.ts", "file"],
-      ["output.map.js", "file"],
-      ["output.map.js.map", "file"],
-      ["audit.ts", "file"],
-      ["audit.js", "file"],
-      ["audit.js.map", "file"],
-      ["bootstrap.ts", "file"],
-      ["bootstrap.js", "file"],
-      ["bootstrap.js.map", "file"],
-    ];
-    for (const [rel, kind] of copies) {
+    for (const [rel, kind] of PARENT_COPIES) {
       const src = join(packageRoot, rel);
       if (!existsSync(src)) continue;
       if (kind === "dir" && statSync(src).isDirectory()) {

@@ -1,0 +1,20 @@
+{
+  "name": "@composer-test/adapter-srccatalog",
+  "version": "0.1.0",
+  "description": "Adapter fixture whose catalog/index.ts imports its primitive schema and metadata from a sibling ../src/ tree via a relative import — the same shape @sifir/design-system ships (catalog/index.ts importing ../src/catalog). Regression fixture for resolveAndCacheParent not copying src/ alongside catalog/.",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./catalog/*": "./catalog/*",
+    "./src/*": "./src/*",
+    "./templates/*": "./templates/*",
+    "./output.map": "./output.map.js"
+  },
+  "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
+    "zod": "^3.23.0"
+  }
+}
