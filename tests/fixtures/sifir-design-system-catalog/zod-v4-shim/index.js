@@ -35,6 +35,18 @@
 // `_def.values` / `_def.value` / `_def.entries` (never anything else off a
 // real Zod instance — its own `zod` import in compile.ts is type-only), so
 // nothing here needs to actually validate data; only that shape matters.
+//
+// Also exports `toJSONSchema` (both as a named export and nested under the
+// `z` namespace object, matching real Zod v4's own dual surface) — a small
+// structural walk of `_def`, standing in for Zod v4's native
+// `z.toJSONSchema()`. `packages/core/src/api/zod-json-schema.ts` resolves
+// "zod" nearest a catalog's own directory and calls whatever it exports
+// under that name for any v4-shaped schema, exactly the way it would call
+// the real Zod v4 package's `toJSONSchema` in production — this shim's
+// version only needs to produce a non-trivial, structurally faithful JSON
+// Schema (not byte-identical to real Zod v4's output) so tests can assert
+// scaffold() no longer comes back with an empty `{}` schema for a
+// v4-authored primitive.
 
 class ZodTypeShim {
   optional() {
@@ -131,6 +143,53 @@ class ZodDiscriminatedUnion extends ZodTypeShim {
   }
 }
 
+// Structural `_def` walk producing a plain JSON Schema object — a
+// deliberately minimal stand-in for real Zod v4's native `z.toJSONSchema()`.
+// `seen` guards against `lazy`'s recursive getters (e.g. Section/Container's
+// self-referential `children` arrays) looping forever.
+function defToJsonSchema(schema, seen) {
+  const def = schema?._def;
+  if (!def) return {};
+  switch (def.type) {
+    case "string":
+      return { type: "string" };
+    case "number":
+      return { type: "number" };
+    case "boolean":
+      return { type: "boolean" };
+    case "literal":
+      return def.values.length === 1
+        ? { const: def.values[0] }
+        : { enum: [...def.values] };
+    case "enum":
+      return { enum: Object.values(def.entries) };
+    case "array":
+      return { type: "array", items: defToJsonSchema(def.element, seen) };
+    case "lazy": {
+      if (seen.has(def)) return {};
+      seen.add(def);
+      return defToJsonSchema(def.getter(), seen);
+    }
+    case "object": {
+      const properties = {};
+      const required = [];
+      for (const [key, value] of Object.entries(schema.shape)) {
+        properties[key] = defToJsonSchema(value, seen);
+        required.push(key);
+      }
+      return { type: "object", properties, required };
+    }
+    case "discriminated-union":
+      return { anyOf: def.options.map((option) => defToJsonSchema(option, seen)) };
+    default:
+      return {};
+  }
+}
+
+export function toJSONSchema(schema) {
+  return defToJsonSchema(schema, new Set());
+}
+
 export const z = {
   object: (shape) => new ZodObject(shape),
   string: () => new ZodString(),
@@ -141,6 +200,7 @@ export const z = {
   array: (element) => new ZodArray(element),
   lazy: (getter) => new ZodLazy(getter),
   discriminatedUnion: (discriminator, options) => new ZodDiscriminatedUnion(discriminator, options),
+  toJSONSchema,
 };
 
 export default z;

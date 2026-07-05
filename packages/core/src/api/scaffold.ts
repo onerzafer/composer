@@ -7,11 +7,11 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { zodToJsonSchema } from "zod-to-json-schema";
 import { compileCatalog, loadCatalog } from "@composer/typescript";
 import { resolveWorkspace } from "../workspace/resolve.js";
 import { layerWorkspace } from "../workspace/layer.js";
 import { assertValidSpecId } from "../workspace/spec-id.js";
+import { catalogSchemaToJsonSchema } from "./zod-json-schema.js";
 
 export type ScaffoldInput =
   | { kind: "primitive"; primitive: string; intent?: string }
@@ -75,10 +75,10 @@ async function scaffoldPrimitive(
   return {
     spec_id: baseId,
     skeleton: buildSkeleton(primitiveName, meta?.examples),
-    schema: zodToJsonSchema(schema as Parameters<typeof zodToJsonSchema>[0], {
+    schema: await catalogSchemaToJsonSchema(schema, {
       name: primitiveName,
-      $refStrategy: "none",
-    }) as Record<string, unknown>,
+      catalogDir: loaded.catalogDir,
+    }),
     field_guidance: meta?.fieldGuidance ?? {},
     when_not_to_use: meta?.whenNotToUse ?? [],
     examples: meta?.examples ?? [],

@@ -20,6 +20,18 @@
 // is and isn't a byte-for-byte copy, and why the fixture uses a small
 // hand-rolled Zod-v4-*shaped* shim (verified against the real `zod@4.4.3`
 // package) rather than that real package itself.
+//
+// This file also covers a second, related bug against the same fixture:
+// `scaffold()` (packages/core/src/api/scaffold.ts) serializes a primitive's
+// schema with `zod-to-json-schema`, which — like `compileCatalog`'s
+// `optionsMap` walk above — only understands Zod v3's `_def` shape. Fed a
+// Zod v4-built schema it recognizes none of it and silently returns `{}`
+// rather than throwing, blinding agent tooling (`catalogDescribe` /
+// `scaffold`'s whole purpose is handing back a filled-in schema). See
+// packages/core/src/api/zod-json-schema.ts for the fix (detect the schema's
+// own Zod major, route v4 to Zod v4's native `z.toJSONSchema()` resolved
+// from the catalog's own "zod", same as this file's `zod-v4-shim` does for
+// `compileCatalog`).
 
 import {
   cpSync,
@@ -132,5 +144,34 @@ describe("compileCatalog against a Zod v4-built discriminated union", () => {
     expect(result.primitives.length).toBe(9);
     expect(result.primitives.map((p) => p.name)).toContain("HeroSection");
     expect(result.catalog_version).toBe("1.0.0");
+  });
+
+  it("scaffold() returns a non-empty JSON schema for a Zod v4-authored primitive (was {} pre-fix)", async () => {
+    // Bug: `zodToJsonSchema` (zod-to-json-schema, built against Zod v3's
+    // `_def` shape) doesn't recognize a Zod v4-built schema's `_def` at all,
+    // so it silently serializes to `{}` — no error, just an empty schema,
+    // which blinds agent tooling calling `scaffold()` for any primitive from
+    // a Zod v4-authored catalog (packages/core/src/api/scaffold.ts).
+    const { scaffold } = (await import("@composer/core")) as {
+      scaffold: (
+        projectRoot: string,
+        input: { kind: "primitive"; primitive: string },
+      ) => Promise<{ schema: Record<string, unknown> }>;
+    };
+
+    const result = await scaffold(project.projectRoot, {
+      kind: "primitive",
+      primitive: "Button",
+    });
+
+    expect(result.schema).not.toEqual({});
+    expect(result.schema).toMatchObject({
+      type: "object",
+      properties: {
+        primitive: { const: "Button" },
+        id: { type: "string" },
+        label: { type: "string" },
+      },
+    });
   });
 });

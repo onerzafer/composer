@@ -47,6 +47,26 @@ describe("MCP composer.scaffold — primitive variant", () => {
     expect(result).toHaveProperty("when_not_to_use");
     expect(result).toHaveProperty("examples");
     expect(result.suggested_next).toBe("compose");
+
+    // Regression pin (Zod v3 path) alongside the Zod v4 path covered by
+    // tests/integration/sifir-catalog-zod-v4.test.ts: the schema must
+    // actually be filled in, not just present as a key — `zod-to-json-schema`
+    // must still be invoked correctly for a v3-authored catalog after
+    // scaffold.ts's serializer was made to branch on Zod major version.
+    expect(result.schema).not.toEqual({});
+    expect(result.schema).toMatchObject({
+      $ref: "#/definitions/Hero",
+      definitions: {
+        Hero: {
+          type: "object",
+          properties: {
+            primitive: { type: "string", const: "Hero" },
+            id: { type: "string" },
+            title: { type: "string" },
+          },
+        },
+      },
+    });
   });
 
   it("rejects unknown primitive name with PRIMITIVE_NOT_FOUND", async () => {
