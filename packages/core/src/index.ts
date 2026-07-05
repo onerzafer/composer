@@ -37,6 +37,7 @@ export {
   ExtendsCycleError,
   type ResolvedParent,
 } from "./workspace/extends.js";
+export { rewriteAdapterAliases } from "./workspace/adapter-aliases.js";
 
 // Lock
 export {

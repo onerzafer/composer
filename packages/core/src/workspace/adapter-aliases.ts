@@ -1,46 +1,55 @@
-// T0XX — Resolve adapter-internal `@/*`-style tsconfig path aliases at
-// `init --extends` copy time.
+// T0XX — Resolve adapter-internal `@/*`-style tsconfig path aliases wherever
+// this engine copies an adapter's catalog/templates/output.map/audit onto
+// disk verbatim.
 //
 // Problem: an adapter package MAY organize its own catalog/templates/
-// output.map.ts using a tsconfig `paths` alias (commonly `"@/*"`) declared in
-// its OWN `tsconfig.json`, resolved by its own build/typecheck tooling.
-// `init --extends` copies `catalog/`, `templates/`, and `output.map.ts`
-// verbatim into the new workspace (v0.1's "self-contained copy" model — see
-// init.ts's header comment) so it can run without parent-layering. That copy
-// carries the bare alias specifier as-is, but nothing downstream understands
-// it: TypeScript's `paths` is a type-checker-only convention that is never
-// rewritten into emitted/loaded module specifiers, and the `tsx` programmatic
-// API this engine loads catalog/output-map/audit modules with (`tsImport`,
-// `tsx/esm/api`) does not apply tsconfig `paths` remapping either — confirmed
-// empirically: passing `{ tsconfig: <path-to-a-tsconfig-declaring-paths> }`
-// still fails to resolve a bare alias specifier. So a workspace copied from
-// an alias-using adapter fails at compose time with Node's own bare-specifier
-// error (`Cannot find package '@/core' imported from .../catalog/index.ts`)
-// — previously "fixed" only by a human hand-authoring a tsconfig.json that
-// re-declares the same paths, which does not actually address the runtime
-// failure (tsc/IDEs would be happy; `compose` still isn't).
+// output.map.ts/audit.ts using a tsconfig `paths` alias (commonly `"@/*"`)
+// declared in its OWN `tsconfig.json`, resolved by its own build/typecheck
+// tooling. TypeScript's `paths` is a type-checker-only convention that is
+// never rewritten into emitted/loaded module specifiers, and the `tsx`
+// programmatic API this engine loads catalog/output-map/audit modules with
+// (`tsImport`, `tsx/esm/api`) does not apply tsconfig `paths` remapping
+// either — confirmed empirically two ways: (1) passing
+// `{ tsconfig: <path-to-a-tsconfig-declaring-paths> }` still fails to
+// resolve a bare alias specifier, and (2) even the auto-discovery tsx falls
+// back to when no explicit tsconfig is given refuses to apply `paths` at all
+// once the importing file's resolved URL sits under a `node_modules`
+// segment — the exact shape every externally-installed adapter has once a
+// real consumer runs `npm install`. So a workspace built from (or extending)
+// an alias-using adapter fails at compose time with Node's own
+// bare-specifier error (`Cannot find package '@/core' imported from
+// .../catalog/index.ts`) for every single spec.
 //
-// Fix: since the copy already preserves each copied file's position relative
-// to the adapter package root (`catalog/` copies to `catalog/`, `templates/`
-// to `templates/`, `output.map.ts` to `output.map.ts`), the relative path
-// between any two files that are BOTH inside that copied set is identical
-// before and after the copy. So any adapter-declared alias whose target
-// resolves inside catalog/templates/output.map.ts can be mechanically
-// rewritten, post-copy, into an equivalent relative specifier — no runtime
-// tsconfig discovery, no new module-loader hook, no new dependency, and no
-// participation required from the (four separate) call sites that later
-// `tsImport` these files. This keeps the fix inside v0.1's layering model:
-// the project's copy is fully self-contained, including its imports.
+// Fix: two call sites copy adapter content onto disk before this engine
+// later `tsImport`s it —
+//   - `composer init --extends <adapter>` copies catalog/templates/
+//     output.map.ts once into the new workspace itself (init.ts's
+//     self-contained copy model).
+//   - `extends:`-style parent-layering re-materializes catalog/templates/
+//     output.map/audit into `.composer/cache/parent/<safeName>/` on every
+//     compose (workspace/extends.ts's `resolveAndCacheParent`).
+// In both cases the copy already preserves each copied file's position
+// relative to the adapter package root (`catalog/` copies to `catalog/`,
+// `audit.ts` copies to `audit.ts`, etc.), so the relative path between any
+// two files that are BOTH inside that copied set is identical before and
+// after the copy. That means any adapter-declared alias whose target
+// resolves inside catalog/templates/output.map.ts/audit.ts can be
+// mechanically rewritten, post-copy, into an equivalent relative specifier —
+// no runtime tsconfig discovery, no new module-loader hook, and no
+// participation required from the (several) call sites that later
+// `tsImport` these files. This keeps the fix at the copy boundary: every
+// copy this engine makes of adapter content is fully self-contained,
+// including its imports.
 //
 // Scope: only bare specifiers matching a `paths` pattern declared in the
 // adapter's own `<pkgPath>/tsconfig.json` are considered. Relative
 // specifiers and real (node_modules) package specifiers are left untouched.
 // An alias whose resolved target falls outside catalog/templates/
-// output.map.ts is out of scope for v0.1's copy model — the adapter would
-// need the file copied too, which this engine has no way to know is safe/
-// intended — so that case raises a clear, descriptive error instead of
-// silently emitting a broken import that would only fail later at compose
-// time with a much more confusing message.
+// output.map.ts/audit.ts is out of scope — the adapter would need the file
+// copied too (e.g. a sibling `src/`), which this engine has no way to know
+// is safe/intended — so that case raises a clear, descriptive error instead
+// of silently emitting a broken import that would only fail later at
+// compose time with a much more confusing message.
 // Similarly, `paths` declared in a config the adapter's tsconfig `extends`
 // (rather than in the file itself) are not read — adapters are expected to
 // declare their own aliases directly, matching the copy-time contract above.
@@ -61,6 +70,14 @@ interface AliasMatch {
   /** Wildcard capture for a `*`-patterned key; null for an exact-key match. */
   capture: string | null;
 }
+
+/** First path segment of each copied root this engine considers a valid
+ * alias-rewrite target — anything an adapter alias resolves to outside one
+ * of these is out of scope (see header comment). `output.map.ts` and
+ * `audit.ts` are themselves single files, so they're matched as a whole
+ * relative path rather than a directory segment. */
+const VALID_TARGET_ROOTS = new Set(["catalog", "templates"]);
+const VALID_TARGET_FILES = new Set(["output.map.ts", "audit.ts"]);
 
 /**
  * Read `compilerOptions.baseUrl` + `paths` directly from `<pkgPath>/tsconfig.json`.
@@ -197,23 +214,27 @@ function rewriteSpecifiers(
 
 /**
  * Resolve and rewrite adapter-internal `paths` aliases across the copied
- * catalog/templates/output.map.ts under `workspaceRoot`, so the copy is fully
- * self-contained. `pkgPath` is the adapter package's own installed root (used
- * to read its tsconfig.json and to resolve alias targets against it).
+ * catalog/templates/output.map.ts/audit.ts under `destRoot`, so the copy is
+ * fully self-contained. `pkgPath` is the adapter package's own installed
+ * root (used to read its tsconfig.json and to resolve alias targets against
+ * it) — for `init --extends` this is the same package the copy was taken
+ * from; for `extends:` parent-layering this is the original
+ * `node_modules/<adapter>` install root, while `destRoot` is the
+ * `.composer/cache/parent/<safeName>/` materialization (see extends.ts).
  *
  * Returns the absolute paths of any files rewritten. Throws a plain `Error`
- * (the caller — init.ts — wraps it as an `InitError`) if an alias resolves
- * to a file outside the copied catalog/templates/output.map.ts, or to
- * nothing at all.
+ * if an alias resolves to a file outside the copied catalog/templates/
+ * output.map.ts/audit.ts, or to nothing at all.
  */
-export function rewriteAdapterAliases(workspaceRoot: string, pkgPath: string): string[] {
+export function rewriteAdapterAliases(destRoot: string, pkgPath: string): string[] {
   const tsPaths = loadAdapterTsPaths(pkgPath);
   if (!tsPaths) return [];
 
   const copiedRoots = [
-    join(workspaceRoot, "catalog"),
-    join(workspaceRoot, "templates"),
-    join(workspaceRoot, "output.map.ts"),
+    join(destRoot, "catalog"),
+    join(destRoot, "templates"),
+    join(destRoot, "output.map.ts"),
+    join(destRoot, "audit.ts"),
   ];
 
   const filesToScan: string[] = [];
@@ -243,17 +264,17 @@ export function rewriteAdapterAliases(workspaceRoot: string, pkgPath: string): s
 
       const relToPkg = relative(pkgPath, resolved);
       const firstSeg = relToPkg.split(sep)[0];
-      const isOutputMap = relToPkg === "output.map.ts";
-      if (relToPkg.startsWith("..") || (firstSeg !== "catalog" && firstSeg !== "templates" && !isOutputMap)) {
+      const isValidFile = VALID_TARGET_FILES.has(relToPkg);
+      if (relToPkg.startsWith("..") || (!isValidFile && !VALID_TARGET_ROOTS.has(firstSeg ?? ""))) {
         throw new Error(
           `adapter alias "${specifier}" resolves to "${relToPkg || resolved}", outside ` +
-            `catalog/templates/output.map.ts — composer's self-contained copy only supports ` +
-            `adapter-internal aliases whose targets live inside those copied trees`,
+            `catalog/templates/output.map.ts/audit.ts — composer's self-contained copy only ` +
+            `supports adapter-internal aliases whose targets live inside those copied trees`,
         );
       }
 
-      const targetInWorkspace = join(workspaceRoot, relToPkg);
-      const rel = relative(dirname(file), targetInWorkspace).split(sep).join("/");
+      const targetInDest = join(destRoot, relToPkg);
+      const rel = relative(dirname(file), targetInDest).split(sep).join("/");
       const withJsExt = rel.replace(/\.tsx?$/, ".js");
       return withJsExt.startsWith(".") ? withJsExt : `./${withJsExt}`;
     });

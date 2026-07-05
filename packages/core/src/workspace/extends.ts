@@ -22,6 +22,7 @@ import {
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { ComposerConfigError, validateComposerConfig } from "./validate-config.js";
+import { rewriteAdapterAliases } from "./adapter-aliases.js";
 
 /** Strips a trailing `@<digits>` (or semver-ish) pin to get the package name. */
 export function stripVersionPin(spec: string): string {
@@ -244,6 +245,23 @@ export function resolveAndCacheParent(
         cpSync(src, join(cacheRoot, rel));
       }
     }
+
+    // Resolve any adapter-internal `@/*`-style tsconfig `paths` aliases the
+    // copied catalog/templates/output.map/audit reference — tsx's tsImport
+    // does not apply tsconfig `paths` remapping (confirmed empirically; see
+    // adapter-aliases.ts), and the materialized cache never ships a
+    // tsconfig.json for it to discover anyway. Without this, an externally
+    // installed adapter authored against its own alias fails every compose
+    // with a bare `Cannot find package '@/...'` (the extends-flow analogue
+    // of the bug `init --extends` already fixes at one-time copy time).
+    try {
+      rewriteAdapterAliases(cacheRoot, packageRoot);
+    } catch (err) {
+      throw new ExtendsResolutionError(
+        `Failed to resolve adapter-internal aliases for ${name}: ${(err as Error).message}`,
+      );
+    }
+
     writeFileSync(
       join(cacheRoot, "manifest.json"),
       JSON.stringify(

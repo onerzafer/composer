@@ -31,8 +31,7 @@ import { createRequire } from "node:module";
 import { execFileSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { compose } from "@composer/core";
-import { rewriteAdapterAliases } from "./adapter-aliases.js";
+import { compose, rewriteAdapterAliases } from "@composer/core";
 
 export class InitError extends Error {
   constructor(
