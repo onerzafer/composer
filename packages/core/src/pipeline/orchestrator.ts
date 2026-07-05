@@ -23,7 +23,7 @@ import { semanticValidate, SemanticValidationError } from "./phases/semantic.js"
 import { runAudit, AuditFailedError } from "./phases/audit.js";
 import { renderSpec, RenderFailedError, type RenderedFile } from "./phases/render.js";
 import { driftCheck, DriftDetectedError } from "./phases/drift.js";
-import { commit, type CommittedFile } from "./phases/commit.js";
+import { commit, CommitRenameError, type CommittedFile } from "./phases/commit.js";
 import { loadAuditChain, loadSiblingSpecs } from "./audit-loader.js";
 
 export interface ComposeOptions {
@@ -175,6 +175,7 @@ function phaseFromError(err: unknown): import("../log/logger.js").PhaseName | nu
   if (err instanceof AuditFailedError) return "audit";
   if (err instanceof RenderFailedError) return "render-staging";
   if (err instanceof DriftDetectedError) return "drift-check";
+  if (err instanceof CommitRenameError) return "atomic-commit";
   return null;
 }
 

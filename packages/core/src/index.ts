@@ -148,6 +148,7 @@ export {
 } from "./pipeline/phases/drift.js";
 export {
   commit,
+  CommitRenameError,
   type CommitInput,
   type CommitResult,
   type CommittedFile,
