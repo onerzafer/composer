@@ -4,8 +4,11 @@
 // (spec_id, spec_line, primitive, node_id) from a (file, line) in generated code.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   makeFixture,
+  makeNextProjectFixture,
   STUB_CATALOG_INDEX,
   STUB_HERO_TEMPLATE,
   STUB_OUTPUT_MAP,
@@ -49,5 +52,40 @@ describe("composer explain (US5 #1, SC-005)", () => {
     const { loadSourceMap, explainAt } = await import("@composer/core");
     const sm = loadSourceMap(fixture.workspaceRoot);
     expect(explainAt(sm, "src/heroes/never-generated.ts", 1)).toBeNull();
+  });
+});
+
+describe("provenance id for id-less primitives (e.g. Page, identified by slug)", () => {
+  let fixture: Fixture;
+
+  beforeEach(() => {
+    fixture = makeNextProjectFixture();
+  });
+
+  afterEach(() => fixture.cleanup());
+
+  it("threads the Page's slug through as its node_id instead of falling back to \"unknown\"", async () => {
+    const { compose, loadSourceMap } = await import("@composer/core");
+    await compose(fixture.projectRoot, "pricing", {
+      primitive: "Page",
+      slug: "pricing",
+      title: "Pricing",
+      tree: [{ primitive: "Hero", id: "pricing-hero", variant: "centered", title: "Pricing" }],
+    });
+
+    const sm = loadSourceMap(fixture.workspaceRoot);
+    const entries = sm.by_file["src/app/pricing/page.tsx"];
+    expect(entries).toBeDefined();
+    expect(entries!.length).toBeGreaterThan(0);
+    expect(entries![0]!.spec_id).toBe("pricing");
+    expect(entries![0]!.node_id).toBe("pricing");
+    expect(entries![0]!.node_id).not.toBe("unknown");
+
+    const generated = readFileSync(
+      join(fixture.projectRoot, "src/app/pricing/page.tsx"),
+      "utf8",
+    );
+    expect(generated).toContain("id=pricing");
+    expect(generated).not.toContain("id=unknown");
   });
 });

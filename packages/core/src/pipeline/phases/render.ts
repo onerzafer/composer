@@ -66,6 +66,20 @@ function isPrimitiveNode(value: unknown): value is PrimitiveNode {
   );
 }
 
+/**
+ * Resolve the provenance id a node is recorded under in the banner,
+ * per-block comment, and sourcemap entry. Most primitives carry an explicit
+ * `id`; top-level primitives like `Page` identify themselves by `slug`
+ * instead (there is no separate `id` field). Falling back to `slug` keeps
+ * that provenance out of "unknown" — only nodes with neither field land there.
+ */
+function resolveNodeId(node: PrimitiveNode): string {
+  if (typeof node.id === "string" && node.id.length > 0) return node.id;
+  const slug = node["slug"];
+  if (typeof slug === "string" && slug.length > 0) return slug;
+  return "unknown";
+}
+
 export async function renderSpec(input: RenderInput): Promise<RenderedFile[]> {
   const out: RenderedFile[] = [];
   await renderNode(input, input.json, out);
@@ -79,7 +93,7 @@ async function renderNode(
 ): Promise<void> {
   if (!isPrimitiveNode(node)) return;
   const primitive = node.primitive;
-  const nodeId = (node.id as string | undefined) ?? "unknown";
+  const nodeId = resolveNodeId(node);
 
   const outputs = resolveOutputs(input.outputMap, primitive, node);
   for (const op of outputs) {
