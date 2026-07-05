@@ -3,6 +3,16 @@
   "version": "0.1.0-alpha.0",
   "description": "Composer CLI — composer init / compose / validate / explain / trace / doctor",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onerzafer/composer.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/onerzafer/composer#readme",
+  "bugs": {
+    "url": "https://github.com/onerzafer/composer/issues"
+  },
+  "author": "Öner Zafer",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

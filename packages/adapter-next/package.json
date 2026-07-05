@@ -3,8 +3,37 @@
   "version": "0.1.0-alpha.0",
   "description": "Reference Composer adapter for Next.js App Router projects",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onerzafer/composer.git",
+    "directory": "packages/adapter-next"
+  },
+  "homepage": "https://github.com/onerzafer/composer#readme",
+  "bugs": {
+    "url": "https://github.com/onerzafer/composer/issues"
+  },
+  "author": "Öner Zafer",
   "type": "module",
-  "files": ["catalog", "templates", "output.map.js", "audit.js", "bootstrap.js", "index.js"],
+  "files": [
+    "catalog",
+    "templates",
+    "output.map.js",
+    "output.map.d.ts",
+    "output.map.js.map",
+    "output.map.d.ts.map",
+    "audit.js",
+    "audit.d.ts",
+    "audit.js.map",
+    "audit.d.ts.map",
+    "bootstrap.js",
+    "bootstrap.d.ts",
+    "bootstrap.js.map",
+    "bootstrap.d.ts.map",
+    "index.js",
+    "index.d.ts",
+    "index.js.map",
+    "index.d.ts.map"
+  ],
   "publishConfig": {
     "access": "public"
   },

@@ -291,7 +291,7 @@ description: "Task list for Composer Toolkit v0.1 implementation"
 ### Final validation
 
 - [ ] T107 (pending — needs human) Execute `/specs/001-composer-toolkit-v0/quickstart.md` end-to-end manually.
-- [ ] T108 (pending — needs human) Publish v0.1.0 release: tag + `npm publish` all seven `@composer/*` packages + GitHub release notes.
+- [ ] T108 (pending — needs human: npm org access + token) Publish v0.1.0 release: tag + publish all 10 `@composer/*` packages (via `pnpm changeset` → `pnpm version-packages` → `pnpm release`, never a bare `npm publish` — see `docs/operations/publishing.md`) + GitHub release notes. In-repo publish-readiness chores (package.json `repository`/`homepage`/`bugs`/`author` metadata, `adapter-next`'s incomplete `files` allowlist, changesets tooling + linked versioning, clean-clone build/typecheck/test verification) are done; only the npm-org-owner steps remain.
 
 ---
 

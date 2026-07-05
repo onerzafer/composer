@@ -86,6 +86,7 @@ A worked example — a NestJS GraphQL API generated from Composer primitives for
 - **Author a vocabulary** via guided interview (`grammar.*` → `promote`): [`docs/adapters/grammar-authoring.md`](docs/adapters/grammar-authoring.md)
 - **What's deferred to v0.2**: [`docs/v0.2-deferrals.md`](docs/v0.2-deferrals.md)
 - **Constitution** (engine rules): [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
+- **Publishing `@composer/*` to npm** (release runbook, workspace-protocol gotcha): [`docs/operations/publishing.md`](docs/operations/publishing.md)
 
 The rest of this README explains the **why** behind the design — read on if you want the architectural reasoning.
 

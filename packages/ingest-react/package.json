@@ -3,6 +3,16 @@
   "version": "0.1.0-alpha.0",
   "description": "Composer ingester plugin: derive primitive drafts from React (.tsx) components.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onerzafer/composer.git",
+    "directory": "packages/ingest-react"
+  },
+  "homepage": "https://github.com/onerzafer/composer#readme",
+  "bugs": {
+    "url": "https://github.com/onerzafer/composer/issues"
+  },
+  "author": "Öner Zafer",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -12,7 +22,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },

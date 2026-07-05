@@ -3,7 +3,21 @@
   "version": "0.1.0-alpha.0",
   "description": "Claude Code skill pack — prose + MCP config for the Composer agent loop",
   "license": "MIT",
-  "files": ["SKILL.md", "mcp.json", "prompts"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/onerzafer/composer.git",
+    "directory": "packages/skill-claude"
+  },
+  "homepage": "https://github.com/onerzafer/composer#readme",
+  "bugs": {
+    "url": "https://github.com/onerzafer/composer/issues"
+  },
+  "author": "Öner Zafer",
+  "files": [
+    "SKILL.md",
+    "mcp.json",
+    "prompts"
+  ],
   "publishConfig": {
     "access": "public"
   },
