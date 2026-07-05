@@ -44,15 +44,29 @@
 // Scope: only bare specifiers matching a `paths` pattern declared in the
 // adapter's own `<pkgPath>/tsconfig.json` are considered. Relative
 // specifiers and real (node_modules) package specifiers are left untouched.
-// An alias whose resolved target falls outside catalog/templates/
-// output.map.ts/audit.ts is out of scope — the adapter would need the file
-// copied too (e.g. a sibling `src/`), which this engine has no way to know
-// is safe/intended — so that case raises a clear, descriptive error instead
-// of silently emitting a broken import that would only fail later at
-// compose time with a much more confusing message.
+// `src/` is a valid rewrite target alongside catalog/templates/
+// output.map.ts/audit.ts because `resolveAndCacheParent` also materializes
+// a parent's `src/` tree (see workspace/extends.ts) — an adapter like
+// @sifir/design-system commonly pulls its own catalog's primitive schemas
+// in via an alias resolving there (e.g. `@/registry/*`). An alias whose
+// resolved target falls outside all of those copied roots is still out of
+// scope — the adapter would need that file copied too, which this engine
+// has no way to know is safe/intended — so that case raises a clear,
+// descriptive error instead of silently emitting a broken import that
+// would only fail later at compose time with a much more confusing
+// message.
 // Similarly, `paths` declared in a config the adapter's tsconfig `extends`
 // (rather than in the file itself) are not read — adapters are expected to
 // declare their own aliases directly, matching the copy-time contract above.
+//
+// An alias that matches a `paths` pattern but resolves to NO file at all
+// (not even outside the copied roots) is left untouched rather than
+// erroring — see `rewriteAdapterAliases`'s own header for why: some of a
+// real adapter's own files (@sifir/design-system's `src/**` component
+// layer, `templates/prep/complexity-config.ts`) deliberately reference an
+// alias only a CONSUMING SITE resolves at its own build time (its own
+// generated `src/config/*`), and this engine's scan runs over the whole
+// copied tree regardless of whether a given file is ever actually loaded.
 
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve as resolvePath, sep } from "node:path";
@@ -75,22 +89,44 @@ interface AliasMatch {
  * alias-rewrite target — anything an adapter alias resolves to outside one
  * of these is out of scope (see header comment). `output.map.ts` and
  * `audit.ts` are themselves single files, so they're matched as a whole
- * relative path rather than a directory segment. */
-const VALID_TARGET_ROOTS = new Set(["catalog", "templates"]);
+ * relative path rather than a directory segment. `src` is included because
+ * `resolveAndCacheParent` materializes a parent's `src/` tree alongside
+ * `catalog/`/`templates/` (see workspace/extends.ts's `PARENT_COPIES`) —
+ * an adapter like `@sifir/design-system` that pulls its own primitive
+ * schemas into `catalog/index.ts` via an alias resolving into `src/`
+ * (e.g. `@/registry/*`) is just as self-contained post-copy as one whose
+ * alias resolves inside `catalog/` itself. */
+const VALID_TARGET_ROOTS = new Set(["catalog", "templates", "src"]);
 const VALID_TARGET_FILES = new Set(["output.map.ts", "audit.ts"]);
 
 /**
  * Read `compilerOptions.baseUrl` + `paths` directly from `<pkgPath>/tsconfig.json`.
  * Returns null when the adapter has no tsconfig.json, it fails to parse, or it
  * declares no `paths` — all "nothing to do" cases, not errors.
+ *
+ * Strips whole-line `//` comments before parsing: a real adapter's
+ * tsconfig.json is JSONC, not strict JSON — `@sifir/design-system`'s own
+ * ships one (documenting its `exclude` list), and a plain `JSON.parse`
+ * against it throws a `SyntaxError` that this function's own "failed to
+ * parse" contract then silently swallows into "no paths declared", which
+ * skips every rewrite below without a single error — a real adapter's
+ * aliases just quietly stay broken. Same whole-line-only convention (a
+ * line whose TRIMMED content starts with `//`) as that adapter's own
+ * `register.mjs` already uses for the identical reason; deliberately not a
+ * general JSONC parser (no trailing-comma handling, no inline `//`).
  */
 function loadAdapterTsPaths(pkgPath: string): AdapterTsPaths | null {
   const tsconfigPath = join(pkgPath, "tsconfig.json");
   if (!existsSync(tsconfigPath)) return null;
 
+  const raw = readFileSync(tsconfigPath, "utf8")
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("//"))
+    .join("\n");
+
   let parsed: unknown;
   try {
-    parsed = JSON.parse(readFileSync(tsconfigPath, "utf8"));
+    parsed = JSON.parse(raw);
   } catch {
     return null;
   }
@@ -214,17 +250,32 @@ function rewriteSpecifiers(
 
 /**
  * Resolve and rewrite adapter-internal `paths` aliases across the copied
- * catalog/templates/output.map.ts/audit.ts under `destRoot`, so the copy is
- * fully self-contained. `pkgPath` is the adapter package's own installed
+ * catalog/templates/output.map.ts/audit.ts/src under `destRoot`, so the copy
+ * is fully self-contained. `pkgPath` is the adapter package's own installed
  * root (used to read its tsconfig.json and to resolve alias targets against
  * it) — for `init --extends` this is the same package the copy was taken
  * from; for `extends:` parent-layering this is the original
  * `node_modules/<adapter>` install root, while `destRoot` is the
  * `.composer/cache/parent/<safeName>/` materialization (see extends.ts).
  *
+ * `src` is scanned alongside catalog/templates/output.map.ts/audit.ts (not
+ * just accepted as a valid alias TARGET — see `VALID_TARGET_ROOTS`) because
+ * a real adapter's `src/` tree commonly uses the SAME alias internally,
+ * self-referentially: `@sifir/design-system`'s `src/catalog/atoms.ts`
+ * imports `@/core/icons/icons-generated`, its own package-wide `@/*` alias,
+ * the same way `catalog/index.ts` does. Since `src/` is copied alongside
+ * `catalog/` (extends.ts's `PARENT_COPIES`), those self-referencing aliases
+ * need the identical rewrite treatment, or the copy is only self-contained
+ * for the FIRST hop (catalog/audit.ts's own imports) and still breaks the
+ * moment loading a spec's catalog transitively pulls in one of src/'s own
+ * alias-using files.
+ *
  * Returns the absolute paths of any files rewritten. Throws a plain `Error`
- * if an alias resolves to a file outside the copied catalog/templates/
- * output.map.ts/audit.ts, or to nothing at all.
+ * if an alias resolves to a REAL file outside the copied catalog/templates/
+ * output.map.ts/audit.ts/src — an alias that doesn't resolve to any file at
+ * all is left untouched instead (see the `resolveAliasTarget` call site's
+ * own comment for why: an eager whole-tree scan runs over files a compose
+ * may never actually load).
  */
 export function rewriteAdapterAliases(destRoot: string, pkgPath: string): string[] {
   const tsPaths = loadAdapterTsPaths(pkgPath);
@@ -235,6 +286,7 @@ export function rewriteAdapterAliases(destRoot: string, pkgPath: string): string
     join(destRoot, "templates"),
     join(destRoot, "output.map.ts"),
     join(destRoot, "audit.ts"),
+    join(destRoot, "src"),
   ];
 
   const filesToScan: string[] = [];
@@ -256,10 +308,22 @@ export function rewriteAdapterAliases(destRoot: string, pkgPath: string): string
 
       const resolved = resolveAliasTarget(tsPaths.baseUrl, match.targets, match.capture);
       if (!resolved) {
-        throw new Error(
-          `adapter alias "${specifier}" (tsconfig pattern "${match.pattern}") did not resolve ` +
-            `to any file under ${tsPaths.baseUrl}`,
-        );
+        // Left untouched, not thrown: scanning the whole copied `src/` tree
+        // (not just catalog/templates/output.map.ts/audit.ts's own direct
+        // imports) means this runs over files that are never actually
+        // `tsImport`ed by a compose at all — @sifir/design-system's own
+        // src/components/**/types.ts and templates/prep/complexity-config.ts
+        // reference `@/config/complexity`, a module that ONLY ever exists in
+        // a CONSUMING SITE's own generated `src/config/complexity.ts`
+        // (deriveWorkspaceConfig's output — see that adapter's own ambient
+        // `complexity.d.ts` shims documenting exactly this), never inside the
+        // adapter package itself, by design. Throwing here would fail
+        // resolveAndCacheParent for every such adapter even though nothing
+        // ever actually executes these specifiers through OUR copy — if a
+        // file that genuinely needs this specifier at runtime IS loaded,
+        // Node's own `Cannot find package` error surfaces there instead,
+        // same failure, just correctly deferred to actual use.
+        return null;
       }
 
       const relToPkg = relative(pkgPath, resolved);

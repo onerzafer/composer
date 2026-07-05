@@ -1,0 +1,20 @@
+{
+  "name": "@composer-test/adapter-srcalias",
+  "version": "0.1.0",
+  "description": "Adapter fixture whose catalog/index.ts imports its primitive schema via the adapter's OWN `@/registry/*` tsconfig alias, which resolves into a sibling `src/` tree copied alongside `catalog/` — the same shape @sifir/design-system ships (catalog/index.ts pulling from src/ via `@/registry/*`). Regression fixture for rewriteAdapterAliases rejecting a src/-resolving alias even after resolveAndCacheParent started copying src/.",
+  "private": true,
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./catalog/*": "./catalog/*",
+    "./src/*": "./src/*",
+    "./templates/*": "./templates/*",
+    "./output.map": "./output.map.js"
+  },
+  "dependencies": {
+    "@composer/adapter-kit": "workspace:*",
+    "zod": "^3.23.0"
+  }
+}
