@@ -5,6 +5,8 @@
 // contract — exactly 4 tools, no inspection escape hatches.
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   makeFixture,
   STUB_CATALOG_INDEX,
@@ -95,5 +97,39 @@ describe("Mock MCP agent — workflow-only surface contract (FR-001/002)", () =>
     expect(composed.spec_saved).toBeTruthy();
     expect(Array.isArray(composed.files_written)).toBe(true);
     expect(composed.files_written.length).toBeGreaterThan(0);
+  });
+
+  it("MCP server picks up a catalog edit between two discover calls, no restart (v0.2 deferral #5)", async () => {
+    const mcp = (await import("@composer/mcp")) as {
+      createServer?: (opts: { cwd: string }) => {
+        callTool: (name: string, args?: unknown) => Promise<unknown>;
+      };
+    };
+    if (!mcp.createServer) throw new Error("createServer() pending T045");
+
+    // One long-lived server instance, mirroring a real MCP session that
+    // stays attached across an editor session (no process restart).
+    const server = mcp.createServer({ cwd: fixture.projectRoot });
+
+    const before = (await server.callTool("composer.discover")) as {
+      primitives: { name: string }[];
+    };
+    expect(before.primitives.map((p) => p.name)).toEqual(["Hero"]);
+
+    // A human edits catalog/index.ts on disk — no restart of the MCP server.
+    const edited = STUB_CATALOG_INDEX.replace(
+      'export const PrimitiveNode = z.discriminatedUnion("primitive", [Hero]);',
+      [
+        'export const Section = z.object({ primitive: z.literal("Section"), id: z.string() }).strict();',
+        'export const SectionMeta = { primitive: "Section", version: "1.0.0", intent: "x", whenToUse: "x", whenNotToUse: [], fieldGuidance: {}, examples: [] } as const;',
+        'export const PrimitiveNode = z.discriminatedUnion("primitive", [Hero, Section]);',
+      ].join("\n"),
+    );
+    writeFileSync(join(fixture.workspaceRoot, "catalog", "index.ts"), edited, "utf8");
+
+    const after = (await server.callTool("composer.discover")) as {
+      primitives: { name: string }[];
+    };
+    expect(after.primitives.map((p) => p.name).sort()).toEqual(["Hero", "Section"]);
   });
 });
